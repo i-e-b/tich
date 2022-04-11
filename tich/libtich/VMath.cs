@@ -151,6 +151,17 @@ internal class VMath
         return a;
     }
 
+    public static Variant PairwiseModulo(Variant a, Variant b)
+    {
+        a.Width = Max(a.Width, b.Width);
+        for (int i = 0; i < a.Width; i++)
+        {
+            var vb = b.Values[i];
+            a.Values[i] = vb == 0 ? a.Values[i] : a.Values[i] % vb;
+        }
+        return a;
+    }
+
     public static Variant PairwiseMultiply(Variant a, Variant b)
     {
         a.Width = Max(a.Width, b.Width);

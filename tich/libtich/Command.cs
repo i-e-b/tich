@@ -49,6 +49,8 @@ public enum Command : byte
     Sub,
     /// <summary> a / b, stack:2->1, params:0 </summary>
     Div,
+    /// <summary> a % b, stack:2->1, params:0 </summary>
+    Mod,
     /// <summary> a * b, stack:2->1, params:0 </summary>
     Mul,
     /// <summary> a ^ b, stack:2->1, params:0 </summary>
@@ -92,6 +94,9 @@ public enum Command : byte
 
 
     // Values (from params to stack)
+    
+    /// <summary> the point being calculated, stack:0->1, params:0  </summary>
+    P,
     /// <summary> param onto stack as scalar, stack:0->1, params:1  </summary>
     Scalar,
     /// <summary> param onto stack as vec2, stack:0->1, params:2  </summary>
@@ -151,8 +156,11 @@ public enum Command : byte
     /// <summary> Interpolate between 2 values, choosing the midpoint, stack:2->1, params:0 </summary>
     Midpoint,
     
-    /// <summary> Interpolate between 2 values, choosing the a scaled value where 0=a, 1=b, stack:2->1, params:1 </summary>
+    /// <summary> Linear interpolate between 2 values, choosing the a scaled value where 0=a, 1=b, stack:2->1, params:1 </summary>
     Lerp,
+    
+    /// <summary> Sigmoid interpolate between 2 values, choosing the a scaled value where 0=a, 1=b, stack:2->1, params:1 </summary>
+    SmoothStep,
     
     /// <summary> Given a vec4 for T/L/B/R edges, return a vector from the centre to one corner of a rectangle, stack:1->1, params:0 </summary>
     Rect,

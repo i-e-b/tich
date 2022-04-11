@@ -12,26 +12,43 @@ public class TichProgram
         _program = program.ToList();
     }
 
-    
     /// <summary>
-    /// Run this program to get the signed distance for a single point in the render space
+    /// Evaluate the program against an initial stack, which will be mutated.
+    /// This is mostly used for testing. Call `CalculateForPoint`
+    /// </summary>
+    public void Evaluate(Stack<Variant> stack, Variant parameter)
+    {
+        // Run the program.
+        for (var i = 0; i < _program.Count; i++)
+        {
+            var step = _program[i];
+            if (step.Cmd == Command.P)
+            {
+                stack.Push(parameter);
+                continue;
+            }
+
+            var end = NextStep(step, stack);
+            
+            if (end)
+            {
+                Console.WriteLine($"Early stop at {i} ({step.Cmd})");
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Run this program to get the signed distance for a single point in the render space.
+    /// Calls evaluate and pulls end value
     /// </summary>
     public double CalculateForPoint(double x, double y)
     {
         var stack = new Stack<Variant>();
         
         stack.Push(Variant.Vec2(x,y));
-        
-        // Run the program.
-        for (var i = 0; i < _program.Count; i++)
-        {
-            var step = _program[i];
-            var end = NextStep(step, stack);
-            if (!end) continue;
-            
-            Console.WriteLine($"Early stop at {i} ({step.Cmd})");
-            break;
-        }
+
+        Evaluate(stack, Variant.Vec2(x, y));
 
         if (stack.Count < 1) return double.NaN; // callers must handle this case
         return stack.Pop().Values[0]; // X component or scalar of stack top
@@ -109,6 +126,10 @@ public class TichProgram
             
             case Command.Div:
                 stack.Push(VMath.PairwiseDivideFloor(Pop(stack), Pop(stack)));
+                return next;
+            
+            case Command.Mod:
+                stack.Push(VMath.PairwiseModulo(Pop(stack), Pop(stack)));
                 return next;
             
             case Command.Mul:
@@ -279,6 +300,8 @@ public class TichProgram
             }
             case Command.Midpoint:
                 break;
+            case Command.SmoothStep:
+                break;
             case Command.Lerp:
                 break;
             case Command.Rect:
@@ -291,8 +314,11 @@ public class TichProgram
                 break;
             case Command.Angle:
                 break;
+            
+            case Command.P:
+                throw new InvalidOperationException("Switch was passed a `P` command, which should have been handled elsewhere.");
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException($"Program has an unknown command: {step.Cmd}");
         }
         return stop;
     }

@@ -29,6 +29,20 @@ public class BasicProgramTests
         Assert.That(result, Is.EqualTo(1.23));
     }
     
+    
+    [Test]
+    public void can_push_target_point()
+    {
+        var subject = new TichProgram(new[]{
+            C(Command.P),
+            C(Command.Add)
+        });
+        
+        var result = subject.CalculateForPoint(10, 1);
+        
+        Assert.That(result, Is.EqualTo(20));
+    }
+    
     [Test]
     public void calculate_distance()
     {
@@ -74,8 +88,5 @@ public class BasicProgramTests
         Assert.That(result, Is.EqualTo(5)); // returns only top of stack
     }
 
-    private Cell C(Command cmd, params double[] p)
-    {
-        return new Cell { Cmd = cmd, Params = p};
-    }
+    private Cell C(Command cmd, params double[] p) => new() { Cmd = cmd, Params = p};
 }
