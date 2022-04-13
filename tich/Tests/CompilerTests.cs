@@ -1,5 +1,6 @@
 ﻿using libtich;
 using NUnit.Framework;
+// ReSharper disable AssignNullToNotNullAttribute
 
 namespace Tests;
 
@@ -7,7 +8,24 @@ namespace Tests;
 public class CompilerTests
 {
     // TODO: flatten these out to expression strings -> final values
-    
+
+    [Test]
+    [TestCase("length(p) - 3.0", 5.602325)]
+    public void expression_tests(string expr, double expected)
+    {
+        Console.WriteLine($"Interpreting ({expr})");
+        var postfix = Compiler.InfixToPostfix(expr);
+        Assert.That(postfix, Is.Not.Null);
+        
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        Assert.That(code, Is.Not.Null);
+        Console.WriteLine(code.PrettyPrint());
+        
+        var program = new TichProgram(code);
+        var result = program.CalculateForPoint(5,7); // length is ~= 8.60232
+        Assert.That(result, Is.EqualTo(expected).Within(0.001));
+    }
+
     [Test] // a function on one side of an operation, a value on the other
     public void very_basic_expression_1()
     {

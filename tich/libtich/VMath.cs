@@ -1,7 +1,8 @@
 namespace libtich;
 
 /// <summary>
-/// Math against Variants
+/// Math against Variants.
+/// Note that parameters are in order to make Pop() easier to use
 /// </summary>
 internal class VMath
 {
@@ -98,7 +99,7 @@ internal class VMath
         
     }
 
-    public static Variant PairwiseMax(Variant a, Variant b)
+    public static Variant PairwiseMax(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -110,7 +111,7 @@ internal class VMath
 
     private static int Max(int a, int b) => a > b ? a : b;
 
-    public static Variant PairwiseMin(Variant a, Variant b)
+    public static Variant PairwiseMin(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -120,7 +121,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant PairwiseAdd(Variant a, Variant b)
+    public static Variant PairwiseAdd(Variant b, Variant a)
     {
         if (b.Width == 1) // vector + scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
@@ -133,7 +134,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant PairwiseSubtract(Variant a, Variant b)
+    public static Variant PairwiseSubtract(Variant b, Variant a)
     {
         if (b.Width == 1) // vector - scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
@@ -146,7 +147,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant PairwiseDivideFloor(Variant a, Variant b)
+    public static Variant PairwiseDivideFloor(Variant b, Variant a)
     {
         if (b.Width == 1) // vector / scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
@@ -160,7 +161,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant PairwiseModulo(Variant a, Variant b)
+    public static Variant PairwiseModulo(Variant b, Variant a)
     {
         if (b.Width == 1) // vector % scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
@@ -174,7 +175,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant PairwiseMultiply(Variant a, Variant b)
+    public static Variant PairwiseMultiply(Variant b, Variant a)
     {
         if (b.Width == 1) // vector * scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
@@ -187,7 +188,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant ComponentwisePower(Variant a, Variant b)
+    public static Variant ComponentwisePower(Variant b, Variant a)
     {
         if (b.Width == 1) // vector ^ scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
@@ -205,14 +206,14 @@ internal class VMath
     private const int Z = 2;
     private const int W = 3;
 
-    public static Variant DotProduct(Variant a, Variant b)
+    public static Variant DotProduct(Variant b, Variant a)
     {
         if (a.Width != 2 || b.Width != 2) return Variant.Scalar(0);
         
         return Variant.Scalar(a.Values[X] * b.Values[X] + a.Values[Y] * b.Values[Y]);
     }
 
-    public static Variant CrossProduct(Variant a, Variant b)
+    public static Variant CrossProduct(Variant b, Variant a)
     {
         if (a.Width != 2 || b.Width != 2) return Variant.Scalar(0);
         
@@ -236,7 +237,7 @@ internal class VMath
         return v;
     }
 
-    public static Variant CompareLess(Variant a, Variant b)
+    public static Variant CompareLess(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -245,7 +246,7 @@ internal class VMath
         }
         return a;
     }
-    public static Variant CompareLessEqual(Variant a, Variant b)
+    public static Variant CompareLessEqual(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -255,7 +256,7 @@ internal class VMath
         return a;
     }
 
-    public static Variant CompareGreater(Variant a, Variant b)
+    public static Variant CompareGreater(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -264,7 +265,7 @@ internal class VMath
         }
         return a;
     }
-    public static Variant CompareGreaterEqual(Variant a, Variant b)
+    public static Variant CompareGreaterEqual(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -273,7 +274,7 @@ internal class VMath
         }
         return a;
     }
-    public static Variant CompareEqual(Variant a, Variant b)
+    public static Variant CompareEqual(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -282,7 +283,7 @@ internal class VMath
         }
         return a;
     }
-    public static Variant CompareNotEqual(Variant a, Variant b)
+    public static Variant CompareNotEqual(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -311,7 +312,7 @@ internal class VMath
         return Variant.Scalar(all ? 1 : 0);
     }
 
-    public static Variant ComponentwiseLogicalAnd(Variant a, Variant b)
+    public static Variant ComponentwiseLogicalAnd(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
@@ -320,7 +321,7 @@ internal class VMath
         }
         return a;
     }
-    public static Variant ComponentwiseLogicalOr(Variant a, Variant b)
+    public static Variant ComponentwiseLogicalOr(Variant b, Variant a)
     {
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)

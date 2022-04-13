@@ -229,6 +229,11 @@ public class Compiler
             }
         } // end foreach
 
+        if (program.Count > 0 && program[0].Cmd == Command.P)
+        {
+            program.RemoveAt(0); // we get a 'free' P at the start of the program
+        }
+
         return program;
     }
 
