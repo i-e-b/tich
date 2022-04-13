@@ -122,6 +122,9 @@ internal class VMath
 
     public static Variant PairwiseAdd(Variant a, Variant b)
     {
+        if (b.Width == 1) // vector + scalar; we smear the scalar first
+            b.W = b.Z = b.Y = b.X;
+        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
@@ -132,6 +135,9 @@ internal class VMath
 
     public static Variant PairwiseSubtract(Variant a, Variant b)
     {
+        if (b.Width == 1) // vector - scalar; we smear the scalar first
+            b.W = b.Z = b.Y = b.X;
+        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
@@ -142,6 +148,9 @@ internal class VMath
 
     public static Variant PairwiseDivideFloor(Variant a, Variant b)
     {
+        if (b.Width == 1) // vector / scalar; we smear the scalar first
+            b.W = b.Z = b.Y = b.X;
+        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
@@ -153,6 +162,9 @@ internal class VMath
 
     public static Variant PairwiseModulo(Variant a, Variant b)
     {
+        if (b.Width == 1) // vector % scalar; we smear the scalar first
+            b.W = b.Z = b.Y = b.X;
+        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
@@ -164,6 +176,9 @@ internal class VMath
 
     public static Variant PairwiseMultiply(Variant a, Variant b)
     {
+        if (b.Width == 1) // vector * scalar; we smear the scalar first
+            b.W = b.Z = b.Y = b.X;
+
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
@@ -174,6 +189,9 @@ internal class VMath
 
     public static Variant ComponentwisePower(Variant a, Variant b)
     {
+        if (b.Width == 1) // vector ^ scalar; we smear the scalar first
+            b.W = b.Z = b.Y = b.X;
+        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {

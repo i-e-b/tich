@@ -171,8 +171,8 @@ public class Compiler
 
         var program = new List<Cell>();
 
-        var values = new Stack<Variant>();
-        values.Push(Variant.Scalar(0.0)); // quick hack to deal with leading uniary operators
+        var values = new Stack<double>();
+        //values.Push(0.0); // quick hack to deal with leading uniary operators
 
         foreach (var token in postfix)
         {
@@ -181,7 +181,7 @@ public class Compiler
             {
                 // If these *aren't* being pulled into function argument lists, they need to be wrapped as Scalars
                 // If they are being pulled in, we'll unwrap them into arg lists
-                values.Push(Variant.Scalar(value));
+                values.Push(value);
                 continue;
             }
 
@@ -189,21 +189,27 @@ public class Compiler
             {
                 // These binary operators need to pull in literals that might be combined. 
                 case "+":
+                    PushRemaining(program, values); // if values are sitting on the stack, push them as scalars
                     program.Add(new Cell { Cmd = Command.Add});
                     break;
                 case "-":
+                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Sub});
                     break;
                 case "*":
+                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Mul});
                     break;
                 case "/":
+                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Div});
                     break;
                 case "^":
+                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Pow});
                     break;
                 case "%":
+                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Mod});
                     break;
                 case ".": // dot notation for swizzling?
@@ -226,7 +232,15 @@ public class Compiler
         return program;
     }
 
-    private static void HandleFunctionLikeToken(string token, Stack<Variant> values, List<Cell> program)
+    private static void PushRemaining(List<Cell> program, Stack<double> values)
+    {
+        while (values.Count > 0)
+        {
+            program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { values.Pop() } });
+        }
+    }
+
+    private static void HandleFunctionLikeToken(string token, Stack<double> values, List<Cell> program)
     {
         switch (token)
         {
@@ -234,12 +248,16 @@ public class Compiler
                 program.Add(new Cell{Cmd=Command.Length});
                 break;
             
+            case "/vec2":
+                program.Add(new Cell{Cmd=Command.Vec2, Params = PullOrError(2,values)});
+                break;
+            
             case "p":
                 program.Add(new Cell{Cmd=Command.P});
                 break;
             
             case "pi":
-                values.Push(Variant.Scalar(Math.PI));
+                values.Push(Math.PI);
                 break;
             
             case "/max":
@@ -248,5 +266,16 @@ public class Compiler
             
             default: throw new Exception($"Unknown function-like token: '{token}'");
         }
+    }
+
+    private static double[] PullOrError(int count, Stack<double> values)
+    {
+        var output = new double[count];
+        for (int i = 0; i < count; i++)
+        {
+            if (values.Count < 1) throw new Exception("Not enough parameters");
+            output[i] = values.Pop();
+        }
+        return output;
     }
 }
