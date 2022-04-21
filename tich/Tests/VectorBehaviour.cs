@@ -11,8 +11,8 @@ public class VectorBehaviour
     {
         // 2 * vec3(1,2,3) --> vec3(2,4,6)
         var subject = new TichProgram(new[]{
-            C(Command.Scalar, 2.0),
             C(Command.Vec3, 1.0, 2.0, 3.0),
+            C(Command.Scalar, 2.0),
             C(Command.Mul)
         });
         

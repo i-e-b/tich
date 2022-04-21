@@ -10,12 +10,23 @@ public class CompilerTests
     // TODO: flatten these out to expression strings -> final values
 
     [Test]
-    [TestCase("length(p) - 3.0", 5.602325)]
+    [TestCase("5.0 - 3.0", 2.0)] // scalars either side of an operator
+    [TestCase("length(p) - 3.0", 5.602325)] // scalar to right of operator
+    [TestCase("8.0 - length(p)", -0.60232)] // scalar to left of operator
+    [TestCase("length(vec2(5, 8)) - length(p)", 0.8316)] // functions on either side of operator
+    [TestCase("pi - length(p)", -5.460)] // using constant names
+    [TestCase("length(p - 1)", 7.211)] // function at top level
+    [TestCase("2 * 3 - 4 * 5", -14)] // order of precedence
+    [TestCase("vec3(2,3,4).y", 3)] // swizzle 1
+    [TestCase("vec3(2,3,4).zx", 4)] // swizzle 2
+    [TestCase("length(vec3(2,3,4).zx)", 4.472)] // swizzle 2. Length (4,2)
+    [TestCase("length(vec3(2,3,4).yyy)", 5.196)] // swizzle 3. Length (3,3,3)
     public void expression_tests(string expr, double expected)
     {
         Console.WriteLine($"Interpreting ({expr})");
         var postfix = Compiler.InfixToPostfix(expr);
         Assert.That(postfix, Is.Not.Null);
+        Console.WriteLine(postfix.PrettyPrint());
         
         var code = Compiler.CompilePostfix(postfix).ToList();
         Assert.That(code, Is.Not.Null);
@@ -24,63 +35,5 @@ public class CompilerTests
         var program = new TichProgram(code);
         var result = program.CalculateForPoint(5,7); // length is ~= 8.60232
         Assert.That(result, Is.EqualTo(expected).Within(0.001));
-    }
-
-    [Test] // a function on one side of an operation, a value on the other
-    public void very_basic_expression_1()
-    {
-        var postfix = Compiler.InfixToPostfix("length(p) - 3.0"); // circle centred at 0,0 with radius 3
-        Assert.That(postfix, Is.Not.Null);
-        
-        var result = Compiler.CompilePostfix(postfix).ToList();
-        Assert.That(result, Is.Not.Null);
-        
-        Console.WriteLine(result.PrettyPrint());
-        
-        Assert.Inconclusive("not done");
-    }
-    
-    
-    [Test] // two values on either side of an operation
-    public void very_basic_expression_2()
-    {
-        var postfix = Compiler.InfixToPostfix("5.0 - 3.0");
-        Assert.That(postfix, Is.Not.Null);
-        
-        var result = Compiler.CompilePostfix(postfix).ToList();
-        Assert.That(result, Is.Not.Null);
-        
-        Console.WriteLine(result.PrettyPrint());
-        
-        Assert.Inconclusive("not done");
-    }
-    
-    [Test] // two expression on either side of an operation
-    public void very_basic_expression_3()
-    {
-        var postfix = Compiler.InfixToPostfix("length(vec2(5, 8)) - length(p)");
-        Assert.That(postfix, Is.Not.Null);
-        
-        var result = Compiler.CompilePostfix(postfix).ToList();
-        Assert.That(result, Is.Not.Null);
-        
-        Console.WriteLine(result.PrettyPrint());
-        
-        Assert.Inconclusive("not done");
-    }
-    
-    
-    [Test] // using constants
-    public void very_basic_expression_4()
-    {
-        var postfix = Compiler.InfixToPostfix("pi - length(p)");
-        Assert.That(postfix, Is.Not.Null);
-        
-        var result = Compiler.CompilePostfix(postfix).ToList();
-        Assert.That(result, Is.Not.Null);
-        
-        Console.WriteLine(result.PrettyPrint());
-        
-        Assert.Inconclusive("not done");
     }
 }

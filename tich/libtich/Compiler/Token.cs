@@ -3,7 +3,7 @@
 /// <summary>
 /// Holds token information
 /// </summary>
-class Token
+public class Token
 {
     public TokenClass Class { get; set; }
     public int Precedence { get; set; }

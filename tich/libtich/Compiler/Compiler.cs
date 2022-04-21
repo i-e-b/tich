@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections;
 
 public class Compiler
 {
@@ -34,13 +33,13 @@ public class Compiler
                             case "-":
                                 // turn a uniary minus and operand into a negative operand
                                 operands.Pop();
-                                postfix.Push(token);
+                                postfix.PushNotEmpty(token);
                                 postfix.Push(new Token("-1"));
                                 postfix.Push(new Token("*"));
                                 break;
                             case "+":
                                 // no change to operand, remove uniary
-                                postfix.Push(token);
+                                postfix.PushNotEmpty(token);
                                 operands.Pop();
                                 break;
                             default:
@@ -73,11 +72,11 @@ public class Compiler
                                 // change value, which will get picked up on bracket close
                                 token.Value = "-";
                                 operands.Pop(); // remove uniary
-                                operands.Push(token); // push bracket
+                                operands.PushNotEmpty(token); // push bracket
                                 break;
                             case "+":
                                 operands.Pop(); // remove uniary
-                                operands.Push(token); // push bracket
+                                operands.PushNotEmpty(token); // push bracket
                                 break;
                             default:
                                 throw new Exception("Unexpected operator");
@@ -97,7 +96,7 @@ public class Compiler
                            && operands.Peek().Class != TokenClass.OpenBracket)
                     {
                         if (operands.Count < 1) throw new Exception("Argument separator outside of argument list");
-                        postfix.Push(operands.Pop());
+                        postfix.PushNotEmpty(operands.Pop());
                     }
 
                     break;
@@ -107,10 +106,10 @@ public class Compiler
                            && token.ShouldDisplace(operands.Peek()))
                     {
                         // compare precedence
-                        postfix.Push(operands.Pop());
+                        postfix.PushNotEmpty(operands.Pop());
                     }
 
-                    operands.Push(token);
+                    operands.PushNotEmpty(token);
                     break;
 
                 case TokenClass.CloseBracket:
@@ -118,7 +117,7 @@ public class Compiler
                            && operands.Peek().Class != TokenClass.OpenBracket)
                     {
                         // add inner bracket contents
-                        postfix.Push(operands.Pop());
+                        postfix.PushNotEmpty(operands.Pop());
                     }
 
                     #region Check for previously caught uniary minus bracket "-(...)"
@@ -140,7 +139,7 @@ public class Compiler
                         && operands.Peek().Class == TokenClass.Function)
                     {
                         // this is actually a function
-                        postfix.Push(operands.Pop());
+                        postfix.PushNotEmpty(operands.Pop());
                     }
 
                     break;
@@ -154,11 +153,11 @@ public class Compiler
         while (operands.HasItems())
         {
             // compare precedence
-            postfix.Push(operands.Pop());
+            postfix.PushNotEmpty(operands.Pop());
         }
 
         var output = new Stack<string>(postfix.Count);
-        foreach (Token t in postfix) output.Push(t.Value.Trim());
+        foreach (var t in postfix) output.PushNotEmpty(t.Value.Trim());
         return output;
     }
 
@@ -171,17 +170,18 @@ public class Compiler
 
         var program = new List<Cell>();
 
-        var values = new Stack<double>();
+        var values = new List<double>();
         //values.Push(0.0); // quick hack to deal with leading uniary operators
 
         foreach (var token in postfix)
         {
+            Console.WriteLine("    >"+token);
             if (string.IsNullOrEmpty(token)) continue;
             if (double.TryParse(token, out var value))
             {
                 // If these *aren't* being pulled into function argument lists, they need to be wrapped as Scalars
                 // If they are being pulled in, we'll unwrap them into arg lists
-                values.Push(value);
+                values.Add(value);
                 continue;
             }
 
@@ -224,7 +224,14 @@ public class Compiler
                     throw new Exception("Unexpected token in Postfix");
 
                 default: // anything else is probably a function, a known constant, etc
-                    HandleFunctionLikeToken(token.ToLowerInvariant(), values, program);
+                    if (token.StartsWith("/")) HandleFunctionLikeToken(token.ToLowerInvariant(), values, program);
+                    else if (token.StartsWith(".")) HandleSwizzle(token.ToLowerInvariant(), values, program);
+                    else
+                    {
+                        PushRemaining(program, values);
+                        HandleConstantLikeToken(token.ToLowerInvariant(), values, program);
+                    }
+
                     break;
             }
         } // end foreach
@@ -237,15 +244,15 @@ public class Compiler
         return program;
     }
 
-    private static void PushRemaining(List<Cell> program, Stack<double> values)
+    private static void PushRemaining(List<Cell> program, List<double> values)
     {
-        while (values.Count > 0)
-        {
-            program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { values.Pop() } });
-        }
+        program.AddRange(
+            values.Select(v=>new Cell{Cmd=Command.Scalar, Params=new[]{v}})
+            );
+        values.Clear();
     }
 
-    private static void HandleFunctionLikeToken(string token, Stack<double> values, List<Cell> program)
+    private static void HandleFunctionLikeToken(string token, List<double> values, List<Cell> program)
     {
         switch (token)
         {
@@ -257,12 +264,8 @@ public class Compiler
                 program.Add(new Cell{Cmd=Command.Vec2, Params = PullOrError(2,values)});
                 break;
             
-            case "p":
-                program.Add(new Cell{Cmd=Command.P});
-                break;
-            
-            case "pi":
-                values.Push(Math.PI);
+            case "/vec3":
+                program.Add(new Cell{Cmd=Command.Vec3, Params = PullOrError(3,values)});
                 break;
             
             case "/max":
@@ -273,14 +276,73 @@ public class Compiler
         }
     }
 
-    private static double[] PullOrError(int count, Stack<double> values)
+    private static void HandleConstantLikeToken(string token, List<double> values, List<Cell> program)
+    {
+        switch (token)
+        {
+            case "p":
+                program.Add(new Cell{Cmd=Command.P});
+                break;
+            
+            case "pi":
+                program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { Math.PI } });
+                break;
+            
+            default: throw new Exception($"Unknown constant-like token: '{token}'");
+        }
+    }
+
+    private static void HandleSwizzle(string token, List<double> values, List<Cell> program)
+    {
+        var idxs = token.ToCharArray();
+        if (idxs.Length < 2) throw new Exception($"unexpected short swizzle: '{token}'");
+        if (idxs.Length > 5) throw new Exception($"unexpected long swizzle: '{token}'");
+
+        if (idxs.Length == 2) program.Add(new Cell { Cmd = Command.Swz1, Params = new[] { SwizIdx(idxs[1]) } });
+        if (idxs.Length == 3) program.Add(new Cell { Cmd = Command.Swz2, Params = new[] { SwizIdx(idxs[1]), SwizIdx(idxs[2]) } });
+        if (idxs.Length == 4) program.Add(new Cell { Cmd = Command.Swz3, Params = new[] { SwizIdx(idxs[1]), SwizIdx(idxs[2]), SwizIdx(idxs[3]) } });
+        if (idxs.Length == 5) program.Add(new Cell { Cmd = Command.Swz4, Params = new[] { SwizIdx(idxs[1]), SwizIdx(idxs[2]), SwizIdx(idxs[3]), SwizIdx(idxs[4]) } });
+        
+    }
+
+    private static double SwizIdx(char c)
+    {
+        switch (c)
+        {
+            case 'x' : return 0;
+            case 'y' : return 1;
+            case 'z' : return 2;
+            case 'w' : return 3;
+            default: throw new Exception($"Invalid swizzle index: '{c}'");
+        }
+    }
+
+    private static double[] PullOrError(int count, List<double> values)
     {
         var output = new double[count];
         for (int i = 0; i < count; i++)
         {
             if (values.Count < 1) throw new Exception("Not enough parameters");
-            output[i] = values.Pop();
+            
+            output[i] = values[0];
+            values.RemoveAt(0);
         }
         return output;
+    }
+}
+
+public static class CompilerExtensions{
+    public static void PushNotEmpty(this Stack<Token> stack, Token? value)
+    {
+        if (value is null) return;
+        if (value.IsEmpty) return;
+        if (string.IsNullOrWhiteSpace(value.Value)) return;
+        stack.Push(value);
+    }
+    public static void PushNotEmpty(this Stack<string> stack, string? value)
+    {
+        if (value is null) return;
+        if (string.IsNullOrWhiteSpace(value)) return;
+        stack.Push(value);
     }
 }

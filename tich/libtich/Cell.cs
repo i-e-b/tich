@@ -32,4 +32,17 @@ public static class CellExtensions
         
         return sb.ToString();
     }
+    
+    
+    public static string PrettyPrint(this IEnumerable<string> program)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var str in program)
+        {
+            sb.AppendLine(str);
+        }
+        
+        return sb.ToString();
+    }
 }

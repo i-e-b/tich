@@ -6,6 +6,11 @@ namespace libtich;
 /// </summary>
 internal class VMath
 {
+    private static void Log(string s)
+    {   // comment out for normal use
+        Console.WriteLine(s);
+    }
+
     public static Variant Cos(Variant v)
     {
         return Variant.Scalar(Math.Cos(v.Values[0]));
@@ -51,6 +56,8 @@ internal class VMath
     public static Variant Length(Variant v)
     {
         var sum = 0.0;
+        
+        Log($"length({v})");
         
         for (int i = 0; i < v.Width; i++)
         {
@@ -139,11 +146,15 @@ internal class VMath
         if (b.Width == 1) // vector - scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
         
+        Log($"{a} - {b}");
+        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
             a.Values[i] -= b.Values[i];
         }
+        
+        Log($" = {a}");
         return a;
     }
 
@@ -179,12 +190,15 @@ internal class VMath
     {
         if (b.Width == 1) // vector * scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
+        
+        Log($"{a} * {b}");
 
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
             a.Values[i] *= b.Values[i];
         }
+        Log($" = {a}");
         return a;
     }
 
@@ -343,6 +357,7 @@ internal class VMath
     public static Variant Swizzle(Variant v, double[] indexes)
     {
         var r = new Variant { Width = indexes.Length };
+        Log($"swz({string.Join(",",indexes.Select(d=>d.ToString()))})");
         for (int i = 0; i < indexes.Length; i++)
         {
             var j = (int)indexes[i];

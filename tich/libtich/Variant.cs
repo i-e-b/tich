@@ -9,7 +9,19 @@ public class Variant
     /// Values held
     /// </summary>
     public readonly double[] Values = new double[4];
-    
+
+    public override string ToString()
+    {
+        switch (Width)
+        {
+            case 4: return $"({X},{Y},{Z},{W})";
+            case 3: return $"({X},{Y},{Z})";
+            case 2: return $"({X},{Y})";
+            case 1: return $"{X}";
+            default: return "?";
+        }
+    }
+
     /// <summary>
     /// How many values are valid?
     /// 1= Scalar, 2=Vec2, 3=Vec3, 4=Vec4
