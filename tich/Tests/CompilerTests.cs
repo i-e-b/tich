@@ -7,9 +7,8 @@ namespace Tests;
 [TestFixture]
 public class CompilerTests
 {
-    // TODO: flatten these out to expression strings -> final values
-
     [Test]
+    // ReSharper disable StringLiteralTypo
     [TestCase("5.0 - 3.0", 2.0)] // scalars either side of an operator
     [TestCase("length(p) - 3.0", 5.602325)] // scalar to right of operator
     [TestCase("8.0 - length(p)", -0.60232)] // scalar to left of operator
@@ -21,6 +20,8 @@ public class CompilerTests
     [TestCase("vec3(2,3,4).zx", 4)] // swizzle 2
     [TestCase("length(vec3(2,3,4).zx)", 4.472)] // swizzle 2. Length (4,2)
     [TestCase("length(vec3(2,3,4).yyy)", 5.196)] // swizzle 3. Length (3,3,3)
+    [TestCase("length(vec3(2,3,4).zzxx)", 6.3245)] // swizzle 4. Length (4,4,2,2)
+    // ReSharper restore StringLiteralTypo
     public void expression_tests(string expr, double expected)
     {
         Console.WriteLine($"Interpreting ({expr})");

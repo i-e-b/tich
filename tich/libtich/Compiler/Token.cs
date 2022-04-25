@@ -5,16 +5,24 @@
 /// </summary>
 public class Token
 {
+    /// <summary> Kind of token </summary>
     public TokenClass Class { get; set; }
+    /// <summary> Binding order </summary>
     public int Precedence { get; set; }
+    /// <summary> Value in expression </summary>
     public string Value { get; set; }
+    /// <summary> left or right binding </summary>
     public Association Direction { get; set; }
 
-    public bool IsEmpty
-    {
-        get { return String.IsNullOrEmpty(Value); }
-    }
+    /// <summary>
+    /// True if the token has no symbol
+    /// </summary>
+    public bool IsEmpty => String.IsNullOrWhiteSpace(Value);
 
+    /// <summary>
+    /// Token for a string
+    /// </summary>
+    /// <param name="value"></param>
     public Token(string value)
     {
         Value = value;
@@ -37,11 +45,17 @@ public class Token
         return other.Precedence > Precedence;
     }
 
+    /// <summary>
+    /// Return original expression value
+    /// </summary>
     public override string ToString()
     {
         return Value;
     }
 
+    /// <summary>
+    /// Return original expression value
+    /// </summary>
     public static implicit operator string(Token t)
     {
         return t.Value;

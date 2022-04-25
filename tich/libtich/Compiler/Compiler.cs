@@ -3,6 +3,9 @@
 using System;
 using System.Collections.Generic;
 
+/// <summary>
+/// Turns expression strings into Tich programs
+/// </summary>
 public class Compiler
 {
     /// <summary>
@@ -225,11 +228,11 @@ public class Compiler
 
                 default: // anything else is probably a function, a known constant, etc
                     if (token.StartsWith("/")) HandleFunctionLikeToken(token.ToLowerInvariant(), values, program);
-                    else if (token.StartsWith(".")) HandleSwizzle(token.ToLowerInvariant(), values, program);
+                    else if (token.StartsWith(".")) HandleSwizzle(token.ToLowerInvariant(), program);
                     else
                     {
                         PushRemaining(program, values);
-                        HandleConstantLikeToken(token.ToLowerInvariant(), values, program);
+                        HandleConstantLikeToken(token.ToLowerInvariant(), program);
                     }
 
                     break;
@@ -276,7 +279,7 @@ public class Compiler
         }
     }
 
-    private static void HandleConstantLikeToken(string token, List<double> values, List<Cell> program)
+    private static void HandleConstantLikeToken(string token, List<Cell> program)
     {
         switch (token)
         {
@@ -292,16 +295,16 @@ public class Compiler
         }
     }
 
-    private static void HandleSwizzle(string token, List<double> values, List<Cell> program)
+    private static void HandleSwizzle(string token, List<Cell> program)
     {
-        var idxs = token.ToCharArray();
-        if (idxs.Length < 2) throw new Exception($"unexpected short swizzle: '{token}'");
-        if (idxs.Length > 5) throw new Exception($"unexpected long swizzle: '{token}'");
+        var indexes = token.ToCharArray();
+        if (indexes.Length < 2) throw new Exception($"unexpected short swizzle: '{token}'");
+        if (indexes.Length > 5) throw new Exception($"unexpected long swizzle: '{token}'");
 
-        if (idxs.Length == 2) program.Add(new Cell { Cmd = Command.Swz1, Params = new[] { SwizIdx(idxs[1]) } });
-        if (idxs.Length == 3) program.Add(new Cell { Cmd = Command.Swz2, Params = new[] { SwizIdx(idxs[1]), SwizIdx(idxs[2]) } });
-        if (idxs.Length == 4) program.Add(new Cell { Cmd = Command.Swz3, Params = new[] { SwizIdx(idxs[1]), SwizIdx(idxs[2]), SwizIdx(idxs[3]) } });
-        if (idxs.Length == 5) program.Add(new Cell { Cmd = Command.Swz4, Params = new[] { SwizIdx(idxs[1]), SwizIdx(idxs[2]), SwizIdx(idxs[3]), SwizIdx(idxs[4]) } });
+        if (indexes.Length == 2) program.Add(new Cell { Cmd = Command.Swz1, Params = new[] { SwizIdx(indexes[1]) } });
+        if (indexes.Length == 3) program.Add(new Cell { Cmd = Command.Swz2, Params = new[] { SwizIdx(indexes[1]), SwizIdx(indexes[2]) } });
+        if (indexes.Length == 4) program.Add(new Cell { Cmd = Command.Swz3, Params = new[] { SwizIdx(indexes[1]), SwizIdx(indexes[2]), SwizIdx(indexes[3]) } });
+        if (indexes.Length == 5) program.Add(new Cell { Cmd = Command.Swz4, Params = new[] { SwizIdx(indexes[1]), SwizIdx(indexes[2]), SwizIdx(indexes[3]), SwizIdx(indexes[4]) } });
         
     }
 
@@ -331,7 +334,13 @@ public class Compiler
     }
 }
 
+/// <summary>
+/// Helper methods for stack manipulation
+/// </summary>
 public static class CompilerExtensions{
+    /// <summary>
+    /// Push a value if it is not null or empty
+    /// </summary>
     public static void PushNotEmpty(this Stack<Token> stack, Token? value)
     {
         if (value is null) return;
@@ -339,6 +348,9 @@ public static class CompilerExtensions{
         if (string.IsNullOrWhiteSpace(value.Value)) return;
         stack.Push(value);
     }
+    /// <summary>
+    /// Push a value if it is not null or empty
+    /// </summary>
     public static void PushNotEmpty(this Stack<string> stack, string? value)
     {
         if (value is null) return;

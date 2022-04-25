@@ -6,10 +6,10 @@ namespace libtich;
 /// </summary>
 internal class VMath
 {
-    private static void Log(string s)
-    {   // comment out for normal use
-        Console.WriteLine(s);
-    }
+    /// <summary>
+    /// The threshold for equality comparisons. Also the zero/non-zero threshold
+    /// </summary>
+    public const double EqualityDifference = 1E-6;
 
     public static Variant Cos(Variant v)
     {
@@ -56,8 +56,6 @@ internal class VMath
     public static Variant Length(Variant v)
     {
         var sum = 0.0;
-        
-        Log($"length({v})");
         
         for (int i = 0; i < v.Width; i++)
         {
@@ -146,15 +144,12 @@ internal class VMath
         if (b.Width == 1) // vector - scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
         
-        Log($"{a} - {b}");
-        
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
             a.Values[i] -= b.Values[i];
         }
         
-        Log($" = {a}");
         return a;
     }
 
@@ -191,14 +186,12 @@ internal class VMath
         if (b.Width == 1) // vector * scalar; we smear the scalar first
             b.W = b.Z = b.Y = b.X;
         
-        Log($"{a} * {b}");
-
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
             a.Values[i] *= b.Values[i];
         }
-        Log($" = {a}");
+        
         return a;
     }
 
@@ -215,10 +208,12 @@ internal class VMath
         return a;
     }
     
+    // ReSharper disable UnusedMember.Local
     private const int X = 0;
     private const int Y = 1;
     private const int Z = 2;
     private const int W = 3;
+    // ReSharper restore UnusedMember.Local
 
     public static Variant DotProduct(Variant b, Variant a)
     {
@@ -293,7 +288,7 @@ internal class VMath
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
-            a.Values[i] = Math.Abs(a.Values[i] - b.Values[i]) < 1E-20 ? 1 : 0;
+            a.Values[i] = Math.Abs(a.Values[i] - b.Values[i]) < EqualityDifference ? 1 : 0;
         }
         return a;
     }
@@ -302,17 +297,17 @@ internal class VMath
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
-            a.Values[i] = Math.Abs(a.Values[i] - b.Values[i]) > 1E-20 ? 1 : 0;
+            a.Values[i] = Math.Abs(a.Values[i] - b.Values[i]) > EqualityDifference ? 1 : 0;
         }
         return a;
     }
-
+    
     public static Variant ComponentAllNonZero(Variant v)
     {
         var all = true;
         for (int i = 0; i < v.Width; i++)
         {
-            all = all && (v.Values[i] != 0);
+            all = all && (Math.Abs(v.Values[i]) >= EqualityDifference);
         }
         return Variant.Scalar(all ? 1 : 0);
     }
@@ -321,7 +316,7 @@ internal class VMath
         var all = true;
         for (int i = 0; i < v.Width; i++)
         {
-            all = all && (v.Values[i] == 0);
+            all = all && (Math.Abs(v.Values[i]) < EqualityDifference);
         }
         return Variant.Scalar(all ? 1 : 0);
     }
@@ -331,7 +326,7 @@ internal class VMath
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
-            a.Values[i] = (a.Values[i]!=0 && b.Values[i]!=0) ? 1 : 0;
+            a.Values[i] = ((Math.Abs(a.Values[i]) >= EqualityDifference) && (Math.Abs(b.Values[i]) >= EqualityDifference)) ? 1 : 0;
         }
         return a;
     }
@@ -340,7 +335,7 @@ internal class VMath
         a.Width = Max(a.Width, b.Width);
         for (int i = 0; i < a.Width; i++)
         {
-            a.Values[i] = (a.Values[i]!=0 || b.Values[i]!=0) ? 1 : 0;
+            a.Values[i] = ((Math.Abs(a.Values[i]) >= EqualityDifference) || (Math.Abs(b.Values[i]) >= EqualityDifference)) ? 1 : 0;
         }
         return a;
     }
@@ -349,7 +344,7 @@ internal class VMath
     {
         for (int i = 0; i < v.Width; i++)
         {
-            v.Values[i] = (v.Values[i] == 0) ? 1 : 0;
+            v.Values[i] = (Math.Abs(v.Values[i]) < EqualityDifference) ? 1 : 0;
         }
         return v;
     }
@@ -357,7 +352,7 @@ internal class VMath
     public static Variant Swizzle(Variant v, double[] indexes)
     {
         var r = new Variant { Width = indexes.Length };
-        Log($"swz({string.Join(",",indexes.Select(d=>d.ToString()))})");
+        
         for (int i = 0; i < indexes.Length; i++)
         {
             var j = (int)indexes[i];

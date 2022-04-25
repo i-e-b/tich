@@ -10,6 +10,9 @@ public class Variant
     /// </summary>
     public readonly double[] Values = new double[4];
 
+    /// <summary>
+    /// Output a human readable representation of this variant
+    /// </summary>
     public override string ToString()
     {
         switch (Width)
@@ -28,11 +31,18 @@ public class Variant
     /// </summary>
     public int Width = 0;
 
+    /// <summary> X value or zero </summary>
     public double X { get => Values[0]; set => Values[0] = value;}
+    /// <summary> Y value or zero </summary>
     public double Y { get => Values[1]; set => Values[1] = value;}
+    /// <summary> Z value or zero </summary>
     public double Z { get => Values[2]; set => Values[2] = value;}
+    /// <summary> W value or zero </summary>
     public double W { get => Values[3]; set => Values[3] = value;}
 
+    /// <summary>
+    /// Wrap a single value in a variant
+    /// </summary>
     public static Variant Scalar(double d)
     {
         var v = new Variant
@@ -43,6 +53,9 @@ public class Variant
         return v;
     }
 
+    /// <summary>
+    /// Two part variant
+    /// </summary>
     public static Variant Vec2(double x, double y)
     {
         return new Variant
@@ -52,6 +65,9 @@ public class Variant
         };
     }
     
+    /// <summary>
+    /// three part variant
+    /// </summary>
     public static Variant Vec3(double x, double y, double z)
     {
         return new Variant
@@ -61,6 +77,9 @@ public class Variant
         };
     }
     
+    /// <summary>
+    /// four part variant
+    /// </summary>
     public static Variant Vec4(double x, double y, double z, double w)
     {
         return new Variant

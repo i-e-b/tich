@@ -7,6 +7,9 @@ public class TichProgram
 {
     private readonly List<Cell> _program;
 
+    /// <summary>
+    /// Wrap a program in a runner
+    /// </summary>
     public TichProgram(IEnumerable<Cell> program)
     {
         _program = program.ToList();
@@ -65,7 +68,6 @@ public class TichProgram
         switch (step.Cmd)
         {
             case Command.Invalid:
-            case Command.Exit:
                 return stop;
             
             case Command.Cos:
