@@ -178,7 +178,6 @@ public class Compiler
 
         foreach (var token in postfix)
         {
-            Console.WriteLine("    >"+token);
             if (string.IsNullOrEmpty(token)) continue;
             if (double.TryParse(token, out var value))
             {
@@ -215,8 +214,7 @@ public class Compiler
                     PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Mod});
                     break;
-                case ".": // dot notation for swizzling?
-                    Console.WriteLine("need to implement swizzling?");
+                case ".": // dot notation for swizzling
                     program.Add(new Cell { Cmd = Command.Mod});
                     break;
 
@@ -259,6 +257,19 @@ public class Compiler
     {
         switch (token)
         {
+            case "/abs":
+                program.Add(new Cell{Cmd=Command.Abs});
+                break;
+            case "/acos":
+                program.Add(new Cell{Cmd=Command.Acos});
+                break;
+            case "/all":
+                program.Add(new Cell{Cmd=Command.All});
+                break;
+            case "/and": // move to ops?
+                program.Add(new Cell{Cmd=Command.And});
+                break;
+            
             case "/length":
                 program.Add(new Cell{Cmd=Command.Length});
                 break;

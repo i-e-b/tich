@@ -37,4 +37,18 @@ public class CompilerTests
         var result = program.CalculateForPoint(5,7); // length is ~= 8.60232
         Assert.That(result, Is.EqualTo(expected).Within(0.001));
     }
+
+    [Test] // these pass P where appropriate to take advantage of the initial-P elision. 
+    [TestCase("abs(p)", Command.Abs)]
+    [TestCase("acos(p)", Command.Acos)]
+    [TestCase("all(p)", Command.All)]
+    [TestCase("and(p,p)", Command.And)]
+    public void function_cases(string expr, Command expected)
+    {
+        var postfix = Compiler.InfixToPostfix(expr);
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        Console.WriteLine(code.PrettyPrint());
+        
+        Assert.That(code.Last().Cmd, Is.EqualTo(expected));
+    }
 }
