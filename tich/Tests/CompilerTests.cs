@@ -38,11 +38,64 @@ public class CompilerTests
         Assert.That(result, Is.EqualTo(expected).Within(0.001));
     }
 
+    [Test]
+    public void expression_with_stack_and_param_use()
+    {
+        // named value
+        var expr = "clamp(pi, 0, 100)"; // stack variables always go first, then parameters
+        Console.WriteLine($"=============[ {expr} ]=====================");
+        
+        var postfix = Compiler.InfixToPostfix(expr);
+        Console.WriteLine(postfix.PrettyPrint());
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        Console.WriteLine(code.PrettyPrint());
+        
+        Assert.That(code[0].Cmd, Is.EqualTo(Command.Scalar), "value cmd");
+        Assert.That(code[0].Params[0], Is.EqualTo(Math.PI).Within(0.001), "scalar value");
+        Assert.That(code[1].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
+        Assert.That(code[1].Params[0], Is.EqualTo(0).Within(0.001), "clamp lower");
+        Assert.That(code[1].Params[1], Is.EqualTo(100).Within(0.001), "clamp upper");
+        
+        // simple value
+        expr = "clamp(0.3, 0, 1)";
+        Console.WriteLine($"=============[ {expr} ]=====================");
+        
+        postfix = Compiler.InfixToPostfix(expr);
+        Console.WriteLine(postfix.PrettyPrint());
+        code = Compiler.CompilePostfix(postfix).ToList();
+        Console.WriteLine(code.PrettyPrint());
+        
+        Assert.That(code[0].Cmd, Is.EqualTo(Command.Scalar), "value cmd");
+        Assert.That(code[0].Params[0], Is.EqualTo(0.3).Within(0.001), "scalar value");
+        Assert.That(code[1].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
+        Assert.That(code[1].Params[0], Is.EqualTo(0).Within(0.001), "clamp lower");
+        Assert.That(code[1].Params[1], Is.EqualTo(1).Within(0.001), "clamp upper");
+        
+        // TODO: compound value
+        expr = "clamp(length(p), 0, 1)";
+        Console.WriteLine($"=============[ {expr} ]=====================");
+        
+        postfix = Compiler.InfixToPostfix(expr);
+        Console.WriteLine(postfix.PrettyPrint());
+        code = Compiler.CompilePostfix(postfix).ToList();
+        Console.WriteLine(code.PrettyPrint());
+        
+        // `p` should be elided
+        Assert.That(code[0].Cmd, Is.EqualTo(Command.Length), "value cmd");
+        Assert.That(code[0].Params.Length, Is.EqualTo(0), "length params");
+        Assert.That(code[1].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
+        Assert.That(code[1].Params[0], Is.EqualTo(0).Within(0.001), "clamp lower");
+        Assert.That(code[1].Params[1], Is.EqualTo(1).Within(0.001), "clamp upper");
+    }
+
     [Test] // these pass P where appropriate to take advantage of the initial-P elision. 
     [TestCase("abs(p)", Command.Abs)]
     [TestCase("acos(p)", Command.Acos)]
     [TestCase("all(p)", Command.All)]
     [TestCase("and(p,p)", Command.And)]
+    [TestCase("angle(p)", Command.Angle)]
+    [TestCase("clamp(p, 0, 1)", Command.Clamp)]
+    [TestCase("cos(p)", Command.Cos)]
     public void function_cases(string expr, Command expected)
     {
         var postfix = Compiler.InfixToPostfix(expr);
@@ -50,5 +103,26 @@ public class CompilerTests
         Console.WriteLine(code.PrettyPrint());
         
         Assert.That(code.Last().Cmd, Is.EqualTo(expected));
+    }
+
+    [Test]
+    [TestCase("notClosed(1,2,3")]
+    [TestCase("abs(1,2,3)")] // too many arguments
+    [TestCase("length()")] // too few arguments
+    public void invalid_expressions(string expr)
+    {
+        try
+        {
+            var postfix = Compiler.InfixToPostfix(expr);
+            var code = Compiler.CompilePostfix(postfix).ToList();
+            Console.WriteLine(code.PrettyPrint());
+
+            Assert.Fail("Did not catch the error");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            // pass
+        }
     }
 }

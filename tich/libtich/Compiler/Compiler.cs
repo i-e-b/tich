@@ -12,12 +12,16 @@ public class Compiler
     /// Transform an infix expression string into a set of postfix tokens.
     /// This handles order of association, parenthesis, etc.
     /// </summary>
-    public static Stack<string> InfixToPostfix(string expression)
+    public static Stack<Token> InfixToPostfix(string expression)
     {
         var operands = new Stack<Token>();
         var postfix = new Stack<Token>();
 
-        foreach (var token in expression.Tokens())
+        var tokens = expression.Tokens();
+        var ok = DefineFunctionArity(tokens);
+        if (!ok) throw new Exception("Unmatched braces in expression"); // TODO: better message
+        
+        foreach (var token in tokens)
         {
             if (token.IsEmpty) continue;
 
@@ -159,59 +163,86 @@ public class Compiler
             postfix.PushNotEmpty(operands.Pop());
         }
 
-        var output = new Stack<string>(postfix.Count);
-        foreach (var t in postfix) output.PushNotEmpty(t.Value.Trim());
+        var output = new Stack<Token>(postfix.Count);
+        foreach (var t in postfix) output.PushNotEmpty(t);
         return output;
+    }
+
+    /// <summary>
+    /// Scan through tokens, finding functions and counting the number of parameters
+    /// </summary>
+    private static bool DefineFunctionArity(List<Token> tokens)
+    {
+        // TODO: this could be made much more efficient, by tracking all depths and their start points, scanning through only once.
+        for (var index = 0; index < tokens.Count; index++)
+        {
+            var token = tokens[index];
+            if (token.Class != TokenClass.Function) continue;
+            if (index == tokens.Count - 1) return false; // can't be matching
+            
+            // next token should be a parenthesis.
+            // we can then scan for separators until we find a matching parenthesis and set the function's arity.
+            // if we find other open parens, we need to ignore until they are all closed
+            // if the open paren is followed by a close, we have empty params.
+            var sepCount = 0; // number of argument separators we've seen at depth == 1
+            var symbolCount = 0; // number of non-paren symbols we've seen at all
+            var parenDepth = 0; // current depth of parenthesis during the scan
+
+            for (int i = index+1; i <= tokens.Count; i++) // deliberately run off the end to catch unmatched parens.
+            {
+                if (i >= tokens.Count) return false; // failed to find match
+                
+                var scanToken = tokens[i];
+                if (scanToken.Class == TokenClass.OpenBracket) parenDepth++;
+                else if (scanToken.Class == TokenClass.CloseBracket) parenDepth--;
+                else if (scanToken.Class == TokenClass.ArgumentSeparator) sepCount += parenDepth == 1 ? 1:0;
+                else symbolCount++;
+                
+                if (parenDepth==0) break; // last symbol closed the function call
+            }
+            
+            if (symbolCount > 0) token.ParameterCount = sepCount + 1;
+        }
+
+        return true;
     }
 
     /// <summary>
     /// Compile a set of postfix tokens into Tich interpreter commands
     /// </summary>
-    public static IEnumerable<Cell> CompilePostfix(Stack<string> postfix)
+    public static IEnumerable<Cell> CompilePostfix(Stack<Token> postfix)
     {
         // very simple for the moment, doesn't handle variables or functions
 
         var program = new List<Cell>();
-
-        var values = new List<double>();
-        //values.Push(0.0); // quick hack to deal with leading uniary operators
+        
+        if (postfix.Count < 1) return Array.Empty<Cell>();
 
         foreach (var token in postfix)
         {
-            if (string.IsNullOrEmpty(token)) continue;
-            if (double.TryParse(token, out var value))
-            {
-                // If these *aren't* being pulled into function argument lists, they need to be wrapped as Scalars
-                // If they are being pulled in, we'll unwrap them into arg lists
-                values.Add(value);
-                continue;
-            }
+            if (string.IsNullOrEmpty(token.Value)) continue;
 
-            switch (token.ToLowerInvariant())
+            token.Value = token.Value.ToLowerInvariant();
+            
+            switch (token.Value)
             {
                 // These binary operators need to pull in literals that might be combined. 
                 case "+":
-                    PushRemaining(program, values); // if values are sitting on the stack, push them as scalars
                     program.Add(new Cell { Cmd = Command.Add});
                     break;
                 case "-":
-                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Sub});
                     break;
                 case "*":
-                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Mul});
                     break;
                 case "/":
-                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Div});
                     break;
                 case "^":
-                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Pow});
                     break;
                 case "%":
-                    PushRemaining(program, values);
                     program.Add(new Cell { Cmd = Command.Mod});
                     break;
                 case ".": // dot notation for swizzling
@@ -225,18 +256,21 @@ public class Compiler
                     throw new Exception("Unexpected token in Postfix");
 
                 default: // anything else is probably a function, a known constant, etc
-                    if (token.StartsWith("/")) HandleFunctionLikeToken(token.ToLowerInvariant(), values, program);
-                    else if (token.StartsWith(".")) HandleSwizzle(token.ToLowerInvariant(), program);
+                    if (token.Class == TokenClass.Operand)
+                    {
+                        program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { token.Number } });
+                    }
+                    else if (token.Value.StartsWith("/")) HandleFunctionLikeToken(token, program);
+                    else if (token.Value.StartsWith(".")) HandleSwizzle(token, program);
                     else
                     {
-                        PushRemaining(program, values);
-                        HandleConstantLikeToken(token.ToLowerInvariant(), program);
+                        HandleConstantLikeToken(token, program);
                     }
 
                     break;
             }
         } // end foreach
-
+        
         if (program.Count > 0 && program[0].Cmd == Command.P)
         {
             program.RemoveAt(0); // we get a 'free' P at the start of the program
@@ -245,51 +279,73 @@ public class Compiler
         return program;
     }
 
-    private static void PushRemaining(List<Cell> program, List<double> values)
-    {
-        program.AddRange(
-            values.Select(v=>new Cell{Cmd=Command.Scalar, Params=new[]{v}})
-            );
-        values.Clear();
-    }
-
-    private static void HandleFunctionLikeToken(string token, List<double> values, List<Cell> program)
+    private static void HandleFunctionLikeToken(Token token, List<Cell> program)
     {
         switch (token)
         {
             case "/abs":
+                AssertArgumentCount(token, 1);
                 program.Add(new Cell{Cmd=Command.Abs});
                 break;
             case "/acos":
+                AssertArgumentCount(token, 1);
                 program.Add(new Cell{Cmd=Command.Acos});
                 break;
             case "/all":
+                AssertArgumentCount(token, 1);
                 program.Add(new Cell{Cmd=Command.All});
                 break;
             case "/and": // move to ops?
+                AssertArgumentCount(token, 2);
                 program.Add(new Cell{Cmd=Command.And});
+                break;
+            case "/angle":
+                AssertArgumentCount(token, 1);
+                program.Add(new Cell{Cmd=Command.Angle});
+                break;
+            case "/cos":
+                AssertArgumentCount(token, 1);
+                program.Add(new Cell{Cmd=Command.Cos});
+                break;
+            
+            
+            case "/max":
+                AssertArgumentCount(token, 2);
+                program.Add(new Cell{Cmd = Command.Max});
                 break;
             
             case "/length":
+                AssertArgumentCount(token, 1);
                 program.Add(new Cell{Cmd=Command.Length});
                 break;
             
             case "/vec2":
-                program.Add(new Cell{Cmd=Command.Vec2, Params = PullOrError(2,values)});
+                AssertArgumentCount(token, 2);
+                program.Add(new Cell{Cmd=Command.Vec2, Params = PullOrError(2,program)});
                 break;
             
             case "/vec3":
-                program.Add(new Cell{Cmd=Command.Vec3, Params = PullOrError(3,values)});
+                AssertArgumentCount(token, 3);
+                program.Add(new Cell{Cmd=Command.Vec3, Params = PullOrError(3,program)});
                 break;
             
-            case "/max":
-                program.Add(new Cell{Cmd = Command.Max});
+            case "/clamp":
+                AssertArgumentCount(token, 3); // 1 stays on the 'stack', 2 moved to args
+                program.Add(new Cell{Cmd=Command.Clamp, Params = PullOrError(2,program)});
                 break;
             
             default: throw new Exception($"Unknown function-like token: '{token}'");
         }
     }
 
+    private static void AssertArgumentCount(Token token, int expected)
+    {
+        if (token.ParameterCount != expected) throw new Exception($"Function {token.Value} should have {expected} parameters, but was given {token.ParameterCount}");
+    }
+
+    /// <summary>
+    /// Convert a name token into a program cell
+    /// </summary>
     private static void HandleConstantLikeToken(string token, List<Cell> program)
     {
         switch (token)
@@ -331,15 +387,23 @@ public class Compiler
         }
     }
 
-    private static double[] PullOrError(int count, List<double> values)
+    /// <summary>
+    /// Pick cell off the end of the program to use as command parameters.
+    /// An exception is thrown if not enough cells are available, or if the cells
+    /// do not contain scalar values
+    /// </summary>
+    private static double[] PullOrError(int count, List<Cell> program)
     {
         var output = new double[count];
-        for (int i = 0; i < count; i++)
+        for (int i = count-1; i >= 0; i--) // order is important
         {
-            if (values.Count < 1) throw new Exception("Not enough parameters");
+            if (program.Count < 1) throw new Exception("Not enough parameters");
             
-            output[i] = values[0];
-            values.RemoveAt(0);
+            var candidate = program[^1];
+            if (candidate.Cmd != Command.Scalar || candidate.Params.Length != 1) throw new Exception("Non-scalar value used for command parameter");
+            
+            output[i] = candidate.Params[0];
+            program.RemoveAt(program.Count - 1);
         }
         return output;
     }
@@ -349,6 +413,15 @@ public class Compiler
 /// Helper methods for stack manipulation
 /// </summary>
 public static class CompilerExtensions{
+    
+    /// <summary>
+    /// Push a value if it is not null or empty
+    /// </summary>
+    public static Stack<string> ToValueStack(this Stack<Token> stack)
+    {
+        return new Stack<string>(stack.Reverse().Select(t=>t.Value));
+    }
+    
     /// <summary>
     /// Push a value if it is not null or empty
     /// </summary>

@@ -131,6 +131,22 @@ public static class CellExtensions
         return sb.ToString();
     }
     
+    /// <summary>
+    /// Generate a human readable string from a set of parser tokens
+    /// </summary>
+    public static string PrettyPrint(this IEnumerable<Token> tokens)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var t in tokens)
+        {
+            if (t.Class == TokenClass.Function) sb.AppendLine($"{t.Value} ({t.Class}/{t.ParameterCount})");
+            else sb.AppendLine($"{t.Value} ({t.Class})");
+        }
+        
+        return sb.ToString();
+    }
+    
     
     /// <summary>
     /// Generate a human readable string from a set of program line descriptions

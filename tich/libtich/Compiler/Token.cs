@@ -15,9 +15,19 @@ public class Token
     public Association Direction { get; set; }
 
     /// <summary>
+    /// Number of parameters, if this token is function-like.
+    /// </summary>
+    public int ParameterCount { get; set; }
+
+    /// <summary>
     /// True if the token has no symbol
     /// </summary>
-    public bool IsEmpty => String.IsNullOrWhiteSpace(Value);
+    public bool IsEmpty => string.IsNullOrWhiteSpace(Value);
+
+    /// <summary>
+    /// Numeric value, if applicable
+    /// </summary>
+    public double Number { get; set; }
 
     /// <summary>
     /// Token for a string
@@ -26,9 +36,19 @@ public class Token
     public Token(string value)
     {
         Value = value;
-        Class = value.Class();
+        if (double.TryParse(value, out var number)) Class = TokenClass.Operand;
+        else Class = value.Class();
+        Number = number;
         Precedence = value.Precedence();
         Direction = value.Associativity();
+    }
+
+    /// <summary>
+    /// Empty token
+    /// </summary>
+    internal Token()
+    {
+        Value = "";
     }
 
     /// <summary>
@@ -59,5 +79,21 @@ public class Token
     public static implicit operator string(Token t)
     {
         return t.Value;
+    }
+
+    /// <summary>
+    /// Create an operand token for a number value
+    /// </summary>
+    public static Token ForScalar(double number)
+    {
+        return new Token
+        {
+            Class = TokenClass.Operand,
+            Precedence = 0,
+            Value = "",
+            Direction = Association.LeftToRight,
+            ParameterCount = 0,
+            Number = number
+        };
     }
 }
