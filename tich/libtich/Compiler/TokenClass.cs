@@ -10,6 +10,10 @@ public enum TokenClass
     /// </summary>
     Operand,
     /// <summary>
+    /// An equality symbol
+    /// </summary>
+    Equality,
+    /// <summary>
     /// Implicit unary function to the right of a value
     /// </summary>
     UniaryPostfix,

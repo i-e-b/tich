@@ -86,9 +86,17 @@ static class Tokeniser
             case "/": return TokenClass.BinaryOperator;
             case "^": return TokenClass.BinaryOperator;
             case "%": return TokenClass.BinaryOperator;
-            case "!": return TokenClass.UniaryPostfix;
+            case "&": return TokenClass.BinaryOperator;
+            case "|": return TokenClass.BinaryOperator;
+            
+            case "!": return TokenClass.Equality;
+            case "=": return TokenClass.Equality;
+            case "<": return TokenClass.Equality;
+            case ">": return TokenClass.Equality;
+            
             case "(": return TokenClass.OpenBracket;
             case ")": return TokenClass.CloseBracket;
+            
             case ",": return TokenClass.ArgumentSeparator;
             default: // not a simple token. Check for number or other
                 double dummy;
@@ -105,16 +113,33 @@ static class Tokeniser
     {
         switch (input.ToLowerInvariant())
         {
+            // separator
             case ",": return 1;
-            case "+": return 2;
-            case "-": return 2;
-            case "*": return 3;
-            case "/": return 3;
-            case "%": return 3;
-            case "^": return 4;
-            case ".": return 5;
-            case "(": return 6;
-            case ")": return 6;
+            
+            // boolean
+            case "|": return 2;
+            case "&": return 2;
+            
+            // equality
+            case "<": return 3;
+            case ">": return 3;
+            case "=": return 3;
+            case "!": return 3;
+            
+            // math
+            case "+": return 4;
+            case "-": return 4;
+            case "*": return 5;
+            case "/": return 5;
+            case "%": return 5;
+            case "^": return 6;
+            
+            // swizzle
+            case ".": return 7;
+            
+            // parenthesis
+            case "(": return 8;
+            case ")": return 8;
             default:
                 return 0;
         }
@@ -128,17 +153,37 @@ static class Tokeniser
         switch (input.ToLowerInvariant())
         {
             // L-R
+            
+            // separator
             case ",": return Association.LeftToRight;
-            case ".": return Association.LeftToRight;
+            
+            // boolean
+            case "|": return Association.LeftToRight;
+            case "&": return Association.LeftToRight;
+            
+            // equality
+            case "<": return Association.LeftToRight;
+            case ">": return Association.LeftToRight;
+            case "=": return Association.LeftToRight;
+            case "!": return Association.LeftToRight;
+            
+            // math
             case "+": return Association.LeftToRight;
             case "-": return Association.LeftToRight;
             case "*": return Association.LeftToRight;
             case "/": return Association.LeftToRight;
             case "%": return Association.LeftToRight;
+            
+            // swizzle
+            case ".": return Association.LeftToRight;
+            
+            // parenthesis
             case "(": return Association.LeftToRight;
             case ")": return Association.LeftToRight;
+            
             // R-L
             case "^": return Association.RightToLeft;
+            
             default:
                 return Association.LeftToRight;
         }

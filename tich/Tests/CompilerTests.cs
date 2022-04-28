@@ -88,7 +88,7 @@ public class CompilerTests
         Assert.That(code[1].Params[1], Is.EqualTo(1).Within(0.001), "clamp upper");
     }
 
-    [Test] // these pass P where appropriate to take advantage of the initial-P elision. 
+    [Test] // these pass P where appropriate to check the initial-P elision. 
     [TestCase("abs(p)", Command.Abs)]
     [TestCase("acos(p)", Command.Acos)]
     [TestCase("all(p)", Command.All)]
@@ -96,6 +96,43 @@ public class CompilerTests
     [TestCase("angle(p)", Command.Angle)]
     [TestCase("clamp(p, 0, 1)", Command.Clamp)]
     [TestCase("cos(p)", Command.Cos)]
+    [TestCase("cross(p,p)", Command.Cross)]
+    [TestCase("dot(p,p)", Command.Dot)]
+    [TestCase("eq(p,p)", Command.Equal)]
+    [TestCase("high(p,p)", Command.Highest)]
+    [TestCase("length(p)", Command.Length)]
+    [TestCase("len(p)", Command.Length)]
+    [TestCase("lerp(p,p, 0.5)", Command.Lerp)]
+    [TestCase("low(p,p)", Command.Lowest)]
+    [TestCase("max(p,p)", Command.Max)]
+    [TestCase("mul(p,1,2,3,4)", Command.MatrixMul)]
+    [TestCase("mid(p,p)", Command.Midpoint)]
+    [TestCase("min(p,p)", Command.Min)]
+    [TestCase("neg(p)", Command.Neg)] // todo: peephole opt for expression that means this
+    [TestCase("none(p)", Command.None)]
+    [TestCase("norm(p)", Command.Normalise)]
+    [TestCase("not(p)", Command.Not)]
+    [TestCase("pow(p,p)", Command.Pow)]
+    [TestCase("rec(p)", Command.Reciprocal)] // todo: peephole opt for expression that means this
+    [TestCase("rect(p)", Command.Rect)]
+    [TestCase("sign(p)", Command.Sign)]
+    [TestCase("sin(p)", Command.Sin)]
+    [TestCase("sqrt(p)", Command.Sqrt)]
+    [TestCase("vec2(0,1)", Command.Vec2)]
+    [TestCase("vec3(0,1,2)", Command.Vec3)]
+    [TestCase("vec4(0,1,2,3)", Command.Vec4)]
+    [TestCase("maxC(p)", Command.MaxComponent)]
+    [TestCase("1", Command.OneS)] // optimisation
+    [TestCase("vec2(1,1)", Command.OneV2)] // optimisation
+    [TestCase("vec3(1,1,1)", Command.OneV3)] // optimisation
+    [TestCase("vec4(1,1,1,1)", Command.OneV4)] // optimisation
+    [TestCase("sig(p,p,0.1)", Command.SmoothStep)]
+    [TestCase("ss(p,p,0.1)", Command.SmoothStep)]
+    //[TestCase("p.xy, p.z", Command.SwzSplit3)] // TODO: maybe pick some kind of syntax for this... maybe generalise?
+    [TestCase("0.0", Command.ZeroS)] // optimisation
+    [TestCase("vec2(0,0)", Command.ZeroV2)] // optimisation
+    [TestCase("vec3(0,0,0)", Command.ZeroV3)] // optimisation
+    [TestCase("vec4(0,0,0,0)", Command.ZeroV4)] // optimisation
     public void function_cases(string expr, Command expected)
     {
         var postfix = Compiler.InfixToPostfix(expr);
@@ -103,6 +140,36 @@ public class CompilerTests
         Console.WriteLine(code.PrettyPrint());
         
         Assert.That(code.Last().Cmd, Is.EqualTo(expected));
+    }
+
+    [Test]
+    [TestCase("1.2 + 3.4", Command.Add, 4.6)]
+    [TestCase("1.2 - 3.4", Command.Sub, -2.2)]
+    [TestCase("1.2 & 3.4", Command.And, 1)]
+    [TestCase("1.2 / 3.4", Command.Div, 0.35294)]
+    [TestCase("1.2 = 3.4", Command.Equal, 0)]
+    [TestCase("1.2 < 3.4", Command.Less, 1)]
+    [TestCase("1.2 % 3.4", Command.Mod, 1.2)]
+    [TestCase("1.2 > 3.4", Command.More, 0)]
+    [TestCase("1.2 * 3.4", Command.Mul, 4.08)]
+    [TestCase("1.2 | 3.4", Command.Or, 1)]
+    [TestCase("1.2 ^ 3.4", Command.Pow, 1.8587)]
+    [TestCase("1.0 / 3.4", Command.Reciprocal, 0.29411)]
+    [TestCase("1.2 <= 3.4", Command.LessEq, 1)]
+    [TestCase("1.2 >= 3.4", Command.MoreEq, 0)]
+    [TestCase("1.2 != 3.4", Command.NotEq, 1)]
+    public void operation_cases(string expr, Command cmdExpected, double valueExpected)
+    {
+        var postfix = Compiler.InfixToPostfix(expr);
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        Console.WriteLine(code.PrettyPrint());
+        
+        Assert.That(code.Last().Cmd, Is.EqualTo(cmdExpected));
+        
+        var program = new TichProgram(code);
+        var result = program.CalculateForPoint(0,1);
+        
+        Assert.That(result, Is.EqualTo(valueExpected).Within(0.001));
     }
 
     [Test]

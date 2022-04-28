@@ -108,11 +108,32 @@ public class Compiler
 
                     break;
 
-                case TokenClass.BinaryOperator:
-                    while (operands.HasItems()
-                           && token.ShouldDisplace(operands.Peek()))
+                case TokenClass.Equality:
+                    // We tokenise all the bits of equality expressions separately,
+                    // now we might need to join them back together.
+                    
+                    // compare precedence
+                    while (operands.HasItems() && token.ShouldDisplace(operands.Peek()))
                     {
-                        // compare precedence
+                        postfix.PushNotEmpty(operands.Pop());
+                    }
+                    
+                    var prev = operands.HasItems() ? operands.Peek() : null;
+                    if (prev?.Class == TokenClass.Equality) // fuse this equality into the previous one
+                    {
+                        prev.Value += token.Value;
+                    }
+                    else
+                    {
+                        operands.PushNotEmpty(token);
+                    }
+
+                    break;
+                
+                case TokenClass.BinaryOperator:
+                    // compare precedence
+                    while (operands.HasItems() && token.ShouldDisplace(operands.Peek()))
+                    {
                         postfix.PushNotEmpty(operands.Pop());
                     }
 
@@ -169,6 +190,123 @@ public class Compiler
     }
 
     /// <summary>
+    /// Compile a set of postfix tokens into Tich interpreter commands
+    /// </summary>
+    public static IEnumerable<Cell> CompilePostfix(Stack<Token> postfix)
+    {
+        // very simple for the moment, doesn't handle variables or functions
+
+        var program = new List<Cell>();
+        
+        if (postfix.Count < 1) return Array.Empty<Cell>();
+
+        foreach (var token in postfix)
+        {
+            if (string.IsNullOrEmpty(token.Value)) continue;
+
+            token.Value = token.Value.ToLowerInvariant();
+            
+            switch (token.Value)
+            {
+                // Normal binary operators, these work only on the stack.
+                case "+":
+                    program.Cmd(Command.Add);
+                    break;
+                case "-":
+                    program.Cmd(Command.Sub);
+                    break;
+                case "*":
+                    program.Cmd(Command.Mul);
+                    break;
+                case "/":
+                    // TODO: peephole reciprocal optimisation
+                    if (CanBeReciprocal(program))
+                    {
+                        program.RemoveAt(program.Count - 2); // remove the 1 value
+                        program.Cmd(Command.Reciprocal);
+                    }
+                    else
+                    {
+                        program.Cmd(Command.Div);
+                    }
+                    break;
+                case "^":
+                    program.Cmd(Command.Pow);
+                    break;
+                case "%":
+                    program.Cmd(Command.Mod);
+                    break;
+                case "|":
+                    program.Cmd(Command.Or);
+                    break;
+                case "&":
+                    program.Cmd(Command.And);
+                    break;
+                
+                // binary equality
+                case "<":
+                    program.Cmd(Command.Less);
+                    break;
+                case "<=":
+                    program.Cmd(Command.LessEq);
+                    break;
+                case ">":
+                    program.Cmd(Command.More);
+                    break;
+                case ">=":
+                    program.Cmd(Command.MoreEq);
+                    break;
+                case "=":
+                    program.Cmd(Command.Equal);
+                    break;
+                case "!=":
+                    program.Cmd(Command.NotEq);
+                    break;
+
+                // not used in postfix notation:
+                case ",":
+                case "(":
+                case ")":
+                    throw new Exception("Unexpected token in Postfix");
+
+                default: // anything else is probably a number, a function, a known constant, etc
+                    if (token.Class == TokenClass.Operand)
+                    {
+                        HandleOperand(program, token);
+                    }
+                    else if (token.Value.StartsWith("/")) HandleFunctionLikeToken(token, program);
+                    else if (token.Value.StartsWith(".")) HandleSwizzle(token, program);
+                    else
+                    {
+                        HandleConstantLikeToken(token, program);
+                    }
+
+                    break;
+            }
+        } // end foreach
+        
+        if (program.Count > 0 && program[0].Cmd == Command.P)
+        {
+            program.RemoveAt(0); // we get a 'free' P at the start of the program
+        }
+
+        return program;
+    }
+
+    /// <summary>
+    /// Checks to see if the program has a OneS and a Variant at the end.
+    /// In which case, we can remove the OneS operand and user Reciprocal instead of divide.
+    /// </summary>
+    private static bool CanBeReciprocal(List<Cell> program)
+    {
+        if (program.Count < 2) return false;
+        var end = program.Count - 1;
+        if (program[end-1].Cmd != Command.OneS) return false;
+        
+        return program[end].Cmd is Command.Scalar or Command.Vec2 or Command.Vec3 or Command.Vec4;
+    }
+
+    /// <summary>
     /// Scan through tokens, finding functions and counting the number of parameters
     /// </summary>
     private static bool DefineFunctionArity(List<Token> tokens)
@@ -208,75 +346,14 @@ public class Compiler
     }
 
     /// <summary>
-    /// Compile a set of postfix tokens into Tich interpreter commands
+    /// Turn a numeric token into a number valued cell.
+    /// This does a few early phase optimisations for common constants
     /// </summary>
-    public static IEnumerable<Cell> CompilePostfix(Stack<Token> postfix)
+    private static void HandleOperand(List<Cell> program, Token token)
     {
-        // very simple for the moment, doesn't handle variables or functions
-
-        var program = new List<Cell>();
-        
-        if (postfix.Count < 1) return Array.Empty<Cell>();
-
-        foreach (var token in postfix)
-        {
-            if (string.IsNullOrEmpty(token.Value)) continue;
-
-            token.Value = token.Value.ToLowerInvariant();
-            
-            switch (token.Value)
-            {
-                // These binary operators need to pull in literals that might be combined. 
-                case "+":
-                    program.Add(new Cell { Cmd = Command.Add});
-                    break;
-                case "-":
-                    program.Add(new Cell { Cmd = Command.Sub});
-                    break;
-                case "*":
-                    program.Add(new Cell { Cmd = Command.Mul});
-                    break;
-                case "/":
-                    program.Add(new Cell { Cmd = Command.Div});
-                    break;
-                case "^":
-                    program.Add(new Cell { Cmd = Command.Pow});
-                    break;
-                case "%":
-                    program.Add(new Cell { Cmd = Command.Mod});
-                    break;
-                case ".": // dot notation for swizzling
-                    program.Add(new Cell { Cmd = Command.Mod});
-                    break;
-
-                // not used in postfix notation:
-                case ",":
-                case "(":
-                case ")":
-                    throw new Exception("Unexpected token in Postfix");
-
-                default: // anything else is probably a function, a known constant, etc
-                    if (token.Class == TokenClass.Operand)
-                    {
-                        program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { token.Number } });
-                    }
-                    else if (token.Value.StartsWith("/")) HandleFunctionLikeToken(token, program);
-                    else if (token.Value.StartsWith(".")) HandleSwizzle(token, program);
-                    else
-                    {
-                        HandleConstantLikeToken(token, program);
-                    }
-
-                    break;
-            }
-        } // end foreach
-        
-        if (program.Count > 0 && program[0].Cmd == Command.P)
-        {
-            program.RemoveAt(0); // we get a 'free' P at the start of the program
-        }
-
-        return program;
+        if (token.Number == 0.0)                      program.Add(new Cell { Cmd = Command.ZeroS });
+        else if (Math.Abs(token.Number - 1.0) < 1E-6) program.Add(new Cell { Cmd = Command.OneS });
+        else                                          program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { token.Number } });
     }
 
     private static void HandleFunctionLikeToken(Token token, List<Cell> program)
@@ -285,58 +362,191 @@ public class Compiler
         {
             case "/abs":
                 AssertArgumentCount(token, 1);
-                program.Add(new Cell{Cmd=Command.Abs});
+                program.Cmd(Command.Abs);
                 break;
             case "/acos":
                 AssertArgumentCount(token, 1);
-                program.Add(new Cell{Cmd=Command.Acos});
+                program.Cmd(Command.Acos);
                 break;
             case "/all":
                 AssertArgumentCount(token, 1);
-                program.Add(new Cell{Cmd=Command.All});
+                program.Cmd(Command.All);
                 break;
             case "/and": // move to ops?
                 AssertArgumentCount(token, 2);
-                program.Add(new Cell{Cmd=Command.And});
+                program.Cmd(Command.And);
                 break;
             case "/angle":
                 AssertArgumentCount(token, 1);
-                program.Add(new Cell{Cmd=Command.Angle});
+                program.Cmd(Command.Angle);
                 break;
             case "/cos":
                 AssertArgumentCount(token, 1);
-                program.Add(new Cell{Cmd=Command.Cos});
+                program.Cmd(Command.Cos);
                 break;
             
             
             case "/max":
                 AssertArgumentCount(token, 2);
-                program.Add(new Cell{Cmd = Command.Max});
+                program.Cmd(Command.Max);
                 break;
             
+            case "/len":
             case "/length":
                 AssertArgumentCount(token, 1);
-                program.Add(new Cell{Cmd=Command.Length});
+                program.Cmd(Command.Length);
                 break;
-            
+
             case "/vec2":
+            {
                 AssertArgumentCount(token, 2);
-                program.Add(new Cell{Cmd=Command.Vec2, Params = PullOrError(2,program)});
+                var p = PullOrError(2, program);
+                if (AllZeros(p)) program.Cmd(Command.ZeroV2);
+                else if (AllOnes(p)) program.Cmd(Command.OneV2);
+                else program.Cmd(Command.Vec2, p);
                 break;
-            
+            }
+
             case "/vec3":
+            {
                 AssertArgumentCount(token, 3);
-                program.Add(new Cell{Cmd=Command.Vec3, Params = PullOrError(3,program)});
+                var p = PullOrError(3, program);
+                if (AllZeros(p)) program.Cmd(Command.ZeroV3);
+                else if (AllOnes(p)) program.Cmd(Command.OneV3);
+                else program.Cmd(Command.Vec3, p);
                 break;
-            
+            }
+
+            case "/vec4":
+            {
+                AssertArgumentCount(token, 4);
+                var p = PullOrError(4, program);
+                if (AllZeros(p)) program.Cmd(Command.ZeroV4);
+                else if (AllOnes(p)) program.Cmd(Command.OneV4);
+                else program.Cmd(Command.Vec4, p);
+                break;
+            }
+
             case "/clamp":
                 AssertArgumentCount(token, 3); // 1 stays on the 'stack', 2 moved to args
-                program.Add(new Cell{Cmd=Command.Clamp, Params = PullOrError(2,program)});
+                program.Cmd(Command.Clamp, PullOrError(2,program));
                 break;
+            
+            case "/cross":
+                AssertArgumentCount(token, 2);
+                program.Cmd(Command.Cross);
+                break;
+            
+            case "/dot":
+                AssertArgumentCount(token,2);
+                program.Cmd(Command.Dot);
+                break;
+            
+            case "/eq":
+                AssertArgumentCount(token, 2);
+                program.Cmd(Command.Equal);
+                break;
+            
+            case "/high":
+                AssertArgumentCount(token,2);
+                program.Cmd(Command.Highest);
+                break;
+            
+            case "/lerp":
+                AssertArgumentCount(token,3);
+                program.Cmd(Command.Lerp, PullOrError(1,program));
+                break;
+            
+            case "/low":
+                AssertArgumentCount(token, 2);
+                program.Cmd(Command.Lowest);
+                break;
+            
+            // ReSharper disable once StringLiteralTypo
+            case "/maxc":
+                AssertArgumentCount(token, 1);
+                program.Cmd(Command.MaxComponent);
+                break;
+            
+            case "/mid":
+                AssertArgumentCount(token, 2);
+                program.Cmd(Command.Midpoint);
+                break;
+            
+            case "/min":
+                AssertArgumentCount(token, 2);
+                program.Cmd(Command.Min);
+                break;
+            
+            case "/mul":
+                AssertArgumentCount(token, 5);
+                program.Cmd(Command.MatrixMul, PullOrError(4,program));
+                break;
+            
+            case "/neg":
+                AssertArgumentCount(token, 1);
+                program.Cmd(Command.Neg);
+                break;
+            
+            case "/none":
+                AssertArgumentCount(token, 1);
+                program.Cmd(Command.None);
+                break;
+            
+            case "/norm":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Normalise);
+                break;
+            
+            case "/not":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Not);
+                break;
+            
+            case "/pow":
+                AssertArgumentCount(token,2);
+                program.Cmd(Command.Pow);
+                break;
+            
+            case "/rec":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Reciprocal);
+                break;
+            
+            case "/rect":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Rect);
+                break;
+            
+            case "/ss":
+            case "/sig":
+                AssertArgumentCount(token,3);
+                program.Cmd(Command.SmoothStep, PullOrError(1,program));
+                break;
+            
+            case "/sign":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Sign);
+                break;
+            
+            case "/sin":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Sin);
+                break;
+            
+            case "/sqrt":
+                AssertArgumentCount(token,1);
+                program.Cmd(Command.Sqrt);
+                break;
+            
             
             default: throw new Exception($"Unknown function-like token: '{token}'");
         }
     }
+
+    private static bool AllZeros(IEnumerable<double> doubles) => doubles.All(t => t == 0);
+
+    private static bool AllOnes(IEnumerable<double> doubles) => doubles.All(t => Math.Abs(t - 1) < 1E-6);
 
     private static void AssertArgumentCount(Token token, int expected)
     {
@@ -351,11 +561,11 @@ public class Compiler
         switch (token)
         {
             case "p":
-                program.Add(new Cell{Cmd=Command.P});
+                program.Cmd(Command.P);
                 break;
             
             case "pi":
-                program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { Math.PI } });
+                program.Cmd(Command.Scalar, Math.PI);
                 break;
             
             default: throw new Exception($"Unknown constant-like token: '{token}'");
@@ -368,10 +578,10 @@ public class Compiler
         if (indexes.Length < 2) throw new Exception($"unexpected short swizzle: '{token}'");
         if (indexes.Length > 5) throw new Exception($"unexpected long swizzle: '{token}'");
 
-        if (indexes.Length == 2) program.Add(new Cell { Cmd = Command.Swz1, Params = new[] { SwizIdx(indexes[1]) } });
-        if (indexes.Length == 3) program.Add(new Cell { Cmd = Command.Swz2, Params = new[] { SwizIdx(indexes[1]), SwizIdx(indexes[2]) } });
-        if (indexes.Length == 4) program.Add(new Cell { Cmd = Command.Swz3, Params = new[] { SwizIdx(indexes[1]), SwizIdx(indexes[2]), SwizIdx(indexes[3]) } });
-        if (indexes.Length == 5) program.Add(new Cell { Cmd = Command.Swz4, Params = new[] { SwizIdx(indexes[1]), SwizIdx(indexes[2]), SwizIdx(indexes[3]), SwizIdx(indexes[4]) } });
+        if (indexes.Length == 2) program.Cmd(Command.Swz1, SwizIdx(indexes[1]));
+        if (indexes.Length == 3) program.Cmd(Command.Swz2, SwizIdx(indexes[1]), SwizIdx(indexes[2]));
+        if (indexes.Length == 4) program.Cmd(Command.Swz3, SwizIdx(indexes[1]), SwizIdx(indexes[2]), SwizIdx(indexes[3]));
+        if (indexes.Length == 5) program.Cmd(Command.Swz4, SwizIdx(indexes[1]), SwizIdx(indexes[2]), SwizIdx(indexes[3]), SwizIdx(indexes[4]));
         
     }
 
@@ -399,7 +609,7 @@ public class Compiler
         {
             if (program.Count < 1) throw new Exception("Not enough parameters");
             
-            var candidate = program[^1];
+            var candidate = AsScalar(program[^1]);
             if (candidate.Cmd != Command.Scalar || candidate.Params.Length != 1) throw new Exception("Non-scalar value used for command parameter");
             
             output[i] = candidate.Params[0];
@@ -407,21 +617,29 @@ public class Compiler
         }
         return output;
     }
+
+    /// <summary>
+    /// Get a scalar value from the cell, if possible.
+    /// Otherwise returns the original cell.
+    /// This can un-do some early phase optimisations
+    /// </summary>
+    private static Cell AsScalar(Cell original)
+    {
+        return original.Cmd switch
+        {
+            Command.Scalar => original,
+            Command.OneS => new Cell { Cmd = Command.Scalar, Params = new[] { 1.0 } },
+            Command.ZeroS => new Cell { Cmd = Command.Scalar, Params = new[] { 0.0 } },
+            _ => original
+        };
+    }
 }
 
 /// <summary>
-/// Helper methods for stack manipulation
+/// Helper methods for compiler
 /// </summary>
-public static class CompilerExtensions{
-    
-    /// <summary>
-    /// Push a value if it is not null or empty
-    /// </summary>
-    public static Stack<string> ToValueStack(this Stack<Token> stack)
-    {
-        return new Stack<string>(stack.Reverse().Select(t=>t.Value));
-    }
-    
+public static class CompilerExtensions
+{
     /// <summary>
     /// Push a value if it is not null or empty
     /// </summary>
@@ -432,13 +650,12 @@ public static class CompilerExtensions{
         if (string.IsNullOrWhiteSpace(value.Value)) return;
         stack.Push(value);
     }
+
     /// <summary>
-    /// Push a value if it is not null or empty
+    /// Add a command to the program
     /// </summary>
-    public static void PushNotEmpty(this Stack<string> stack, string? value)
+    public static void Cmd(this List<Cell> program, Command cmd, params double[] parameters)
     {
-        if (value is null) return;
-        if (string.IsNullOrWhiteSpace(value)) return;
-        stack.Push(value);
+        program.Add(new Cell { Cmd = cmd, Params = parameters });
     }
 }
