@@ -96,4 +96,20 @@ public class Token
             Number = number
         };
     }
+
+    /// <summary>
+    /// Make a new token with same settings as ours, but a different value
+    /// </summary>
+    public Token Split(string newName)
+    {
+        var result = new Token(newName)
+        {
+            Class = Class,
+            Precedence = Precedence,
+            Direction = Direction,
+            ParameterCount = ParameterCount,
+            Number = Number
+        };
+        return result;
+    }
 }

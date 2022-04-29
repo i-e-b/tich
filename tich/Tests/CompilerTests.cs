@@ -21,6 +21,9 @@ public class CompilerTests
     [TestCase("length(vec3(2,3,4).zx)", 4.472)] // swizzle 2. Length (4,2)
     [TestCase("length(vec3(2,3,4).yyy)", 5.196)] // swizzle 3. Length (3,3,3)
     [TestCase("length(vec3(2,3,4).zzxx)", 6.3245)] // swizzle 4. Length (4,4,2,2)
+    [TestCase("vec4(len(p - vec2(2,2)), p.x < 4, p.y < 4, p.y - p.x < 4)", 6.3245)] // more complex statement. IEB: re-think function argument merging.
+    
+    // TODO: assignment & multiple expressions
     // ReSharper restore StringLiteralTypo
     public void expression_tests(string expr, double expected)
     {

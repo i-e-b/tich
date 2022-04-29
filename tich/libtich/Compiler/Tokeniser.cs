@@ -12,7 +12,7 @@ static class Tokeniser
     /// </summary>
     public static List<Token> Tokens(this string input)
     {
-        // (strings) | (nums, funcs, vars) | (sci nums)
+        // (strings) | (nums, functions, vars) | (sci nums)
         var r = new Regex(@"(\['.*?'\])|([^0-9a-zA-Z.\$])|([0-9.]+e[+\-]?[0-9]+)");
         // anything but alpha numeric or decimals gets split
         var output = new List<Token>();
@@ -56,14 +56,30 @@ static class Tokeniser
             #region check for functions
 
             // a name followed by an open bracket is taken to be a function
-            if (last != null)
-                if (t.Class == TokenClass.OpenBracket
-                    && output.Count > 0
-                    && last.Class == TokenClass.Name)
+            if (t.Class == TokenClass.OpenBracket
+             && last != null
+             && output.Count > 0
+             && last.Class == TokenClass.Name)
+            {
+                last.Class = TokenClass.Function;
+                last.Value = "/" + last; // easier to find functions, plus vars and functions can share a name
+            }
+
+            #endregion
+            
+            #region check for name.name, and split
+            if (t.Class == TokenClass.Name
+                && t.Value.Contains('.'))
+            {
+                // note, we keep the dots, to understand the relationship later (we treat the second like a special function)
+                var bits = t.Value.Split('.');
+                for (int i = 0; i < bits.Length; i++)
                 {
-                    last.Class = TokenClass.Function;
-                    last.Value = "/" + last; // easier to find functions, plus vars and functions can share a name
+                    var prefix = i == 0 ? "" : ".";
+                    output.Add(t.Split(prefix + bits[i]));
                 }
+                continue;
+            }
 
             #endregion
 
