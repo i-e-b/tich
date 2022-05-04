@@ -31,15 +31,17 @@ public class Cell
     /// </summary>
     public byte[] ToByteString()
     {
-        // TODO: either int8, fix8:8, or fix16:16?
-        // Could also have an int4 for swizzle indexes
-        // 6 bits would give 63 commands and 2 spare to encode the param types
-        
-        // Initially, we just do it the simple way
         var result = new List<byte>();
-        result.Add((byte)Cmd);
-        
-        result.AddRange(To16_16(NumberValue));
+        if (Cmd == Command.Scalar)
+        {
+            // TODO: better representation
+            result.Add((byte)Cmd);
+            result.AddRange(To16_16(NumberValue));
+        }
+        else
+        {
+            result.Add((byte)Cmd);
+        }
         
         return result.ToArray();
     }
@@ -54,7 +56,13 @@ public class Cell
         {
             Cmd = (Command)data[offset]
         };
-        
+
+        if (cell.Cmd == Command.Scalar)
+        {
+            cell.NumberValue = From16_16(data, offset+1);
+            used += 4;
+        }
+
         return cell;
     }
 

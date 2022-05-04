@@ -1,5 +1,6 @@
 ﻿using libtich;
 using NUnit.Framework;
+// ReSharper disable AssignNullToNotNullAttribute
 
 namespace Tests;
 
@@ -7,10 +8,9 @@ namespace Tests;
 public class SerialisationTests
 {
     [Test]
-    public void cell_data_survives_round_trip()
+    public void command_cell_data_survives_round_trip()
     {
-        /*
-        var original = new Cell { Cmd = Command.Vec4, Params = new[] { 1.0, 2.0, 3.0, 4.0 } };
+        var original = new Cell { Cmd = Command.Vec4 };
         Console.WriteLine(original);
         
         var bytes = original.ToByteString();
@@ -21,10 +21,28 @@ public class SerialisationTests
         
         Assert.That(used, Is.EqualTo(bytes.Length), "bytes consumed");
         Assert.That(restored.Cmd, Is.EqualTo(original.Cmd), "cmd");
-        for (int i = 0; i < 4; i++)
-        {
-            Assert.That(restored.Params[i], Is.EqualTo(original.Params[i]), $"params[{i}]");
-        }*/
-        Assert.Inconclusive("Needs rewriting");
+    }
+    
+    [Test]
+    public void numeric_cell_data_survives_round_trip()
+    {
+        var original = new Cell { Cmd = Command.Scalar, NumberValue = 3.1415};
+        Console.WriteLine(original);
+        
+        var bytes = original.ToByteString();
+        Console.WriteLine(string.Join("", bytes.Select(b=>b.ToString("X2"))));
+        
+        var restored = Cell.FromByteString(bytes, 0, out var used);
+        Console.WriteLine(restored);
+        
+        Assert.That(used, Is.EqualTo(bytes.Length), "bytes consumed");
+        Assert.That(restored.Cmd, Is.EqualTo(original.Cmd), "cmd");
+        Assert.That(restored.NumberValue, Is.EqualTo(original.NumberValue).Within(0.001), "NumberValue");
+    }
+
+    [Test]
+    public void entire_program_can_be_serialised_and_restored()
+    {
+        Assert.Inconclusive("not yet implemented");
     }
 }
