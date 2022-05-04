@@ -58,10 +58,11 @@ n*[            <-- per layer
     uint32 ARGB <-- color for this layer
 
     n*[         <-- drawing commands
-        uint8 cmd <-- command type
-        n*[ <-- count of args is fixed for each command. May be zero.
-            fix16:16 arg <-- argument (meaning depends on command)
-        ]
+        bit    cmdFlag  <-- if set: one byte of cmd, else multiple bytes of value
+            uint7  cmd
+        ||  
+            uint7 dataLength <-- number of bytes to follow 1..128
+            n*uint8 dataN   <-- probably a chain of bytes, assuming symmetric fix-point, with odd on left of decimal point. 
     ]
 ]
 
@@ -74,6 +75,8 @@ All commands should be able to take in any of:
 scalar, vec2, vec3, vec4
 
 and can output any of those (doesn't have to be the same).
+
+This is called `Variant` in the code
 
 ### Commands?
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace libtich;
@@ -11,17 +12,18 @@ public class Cell
     /// Command for this cell
     /// </summary>
     public Command Cmd = Command.Invalid;
+    
     /// <summary>
     /// Parameters for the command
     /// </summary>
-    public double[] Params = Array.Empty<double>();
+    public double NumberValue;
 
     /// <summary>
     /// Return a human readable string representation of this cell
     /// </summary>
     public override string ToString()
     {
-        return $"{Cmd}({string.Join(", ", Params)})";
+        return Cmd == Command.Scalar ? NumberValue.ToString(CultureInfo.InvariantCulture) : $"{Cmd}";
     }
 
     /// <summary>
@@ -36,10 +38,8 @@ public class Cell
         // Initially, we just do it the simple way
         var result = new List<byte>();
         result.Add((byte)Cmd);
-        foreach (var param in Params)
-        {
-            result.AddRange(To16_16(param));
-        }
+        
+        result.AddRange(To16_16(NumberValue));
         
         return result.ToArray();
     }
@@ -55,20 +55,6 @@ public class Cell
             Cmd = (Command)data[offset]
         };
         
-        var ac = ArgCount(cell.Cmd);
-        if (ac == 0) return cell;
-        
-        var end = offset+1+(ac*4);
-        if (end > data.Length) throw new Exception($"Unexpected end of cell ({end} vs {data.Length})"); // TODO: switch to recover once working
-        
-        var idx = offset+1;
-        cell.Params = new double[ac];
-        for (int i = 0; i < ac; i++)
-        {
-            cell.Params[i] = From16_16(data, idx);
-            idx += 4;
-            used += 4;
-        }
         return cell;
     }
 
@@ -88,11 +74,6 @@ public class Cell
         result[3] = (byte)((i >>  0) & 0xff);
         return result;
     }
-
-    private static int ArgCount(Command cmd)
-    {
-        return GetAttributeOfType<ArgCountAttribute>(cmd)?.Count ?? 0;
-    }
     
     /// <summary>
     /// Gets an attribute on an enum field value
@@ -108,6 +89,20 @@ public class Cell
         if (memInfo.Length < 1) return null;
         var attributes = memInfo[0].GetCustomAttributes(typeof(T), false);
         return (attributes.Length > 0) ? (T?)attributes[0] : null;
+    }
+
+    /// <summary>
+    /// Get a numeric value from this cell. Gives NaN if not valid
+    /// </summary>
+    public double AsNumber()
+    {
+        return Cmd switch
+        {
+            Command.ZeroS => 0.0,
+            Command.OneS => 1.0,
+            Command.Scalar => NumberValue,
+            _ => double.NaN
+        };
     }
 }
 

@@ -21,7 +21,7 @@ public class BasicProgramTests
     public void return_a_single_value()
     {
         var subject = new TichProgram(new[]{
-            C(Command.Scalar, 1.23)
+            C(1.23)
         });
         
         var result = subject.CalculateForPoint(10, 10);
@@ -47,7 +47,9 @@ public class BasicProgramTests
     public void calculate_distance()
     {
         var subject = new TichProgram(new[]{
-            C(Command.Vec2, 5, 3),
+            C(5),
+            C(3),
+            C(Command.Vec2),
             C(Command.Sub),
             C(Command.Length)
         });
@@ -65,9 +67,7 @@ public class BasicProgramTests
     public void incorrect_program_stops()
     {
         var subject = new TichProgram(new[]{
-            C(Command.Vec4, 1),
-            C(Command.Sub),
-            C(Command.Length)
+            C(Command.Invalid)
         });
         var result = subject.CalculateForPoint(10, 10);
         Assert.That(result, Is.EqualTo(10)); // stops before pushing the value, P is still top of stack
@@ -77,16 +77,17 @@ public class BasicProgramTests
     public void other_values_on_stack_are_ignored()
     {
         var subject = new TichProgram(new[]{
-            C(Command.Scalar, 0),
-            C(Command.Scalar, 1),
-            C(Command.Scalar, 2),
-            C(Command.Scalar, 3),
-            C(Command.Scalar, 4),
-            C(Command.Scalar, 5),
+            C((double)0),
+            C(1),
+            C(2),
+            C(3),
+            C(4),
+            C(5),
         });
         var result = subject.CalculateForPoint(10, 10);
         Assert.That(result, Is.EqualTo(5)); // returns only top of stack
     }
 
-    private Cell C(Command cmd, params double[] p) => new() { Cmd = cmd, Params = p};
+    private Cell C(double p) => new() { Cmd = Command.Scalar, NumberValue = p};
+    private Cell C(Command cmd) => new() { Cmd = cmd};
 }

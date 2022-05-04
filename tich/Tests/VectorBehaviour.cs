@@ -11,8 +11,11 @@ public class VectorBehaviour
     {
         // 2 * vec3(1,2,3) --> vec3(2,4,6)
         var subject = new TichProgram(new[]{
-            C(Command.Vec3, 1.0, 2.0, 3.0),
-            C(Command.Scalar, 2.0),
+            C(1.0),
+            C(2.0),
+            C(3.0),
+            C(Command.Vec3),
+            C(2.0),
             C(Command.Mul)
         });
         
@@ -26,6 +29,7 @@ public class VectorBehaviour
         Assert.That(result.Y, Is.EqualTo(4), "Y doubled");
         Assert.That(result.Z, Is.EqualTo(6), "Z doubled");
     }
-    
-    private Cell C(Command cmd, params double[] p) => new() { Cmd = cmd, Params = p};
+
+    private Cell C(double p) => new() { Cmd = Command.Scalar, NumberValue = p };
+    private Cell C(Command cmd) => new() { Cmd = cmd };
 }

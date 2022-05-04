@@ -353,7 +353,7 @@ public class Compiler
     {
         if (token.Number == 0.0)                      program.Add(new Cell { Cmd = Command.ZeroS });
         else if (Math.Abs(token.Number - 1.0) < 1E-6) program.Add(new Cell { Cmd = Command.OneS });
-        else                                          program.Add(new Cell { Cmd = Command.Scalar, Params = new[] { token.Number } });
+        else                                          program.Add(new Cell { Cmd = Command.Scalar, NumberValue = token.Number });
     }
 
     private static void HandleFunctionLikeToken(Token token, List<Cell> program)
@@ -400,36 +400,33 @@ public class Compiler
             case "/vec2":
             {
                 AssertArgumentCount(token, 2);
-                var p = PullOrError(2, program);
-                if (AllZeros(p)) program.Cmd(Command.ZeroV2);
-                else if (AllOnes(p)) program.Cmd(Command.OneV2);
-                else program.Cmd(Command.Vec2, p);
+                if (AllZeros(program, 2)) { program.Drop(2); program.Cmd(Command.ZeroV2); }
+                else if (AllOnes(program, 2)) { program.Drop(2); program.Cmd(Command.OneV2); }
+                else program.Cmd(Command.Vec2);
                 break;
             }
 
             case "/vec3":
             {
                 AssertArgumentCount(token, 3);
-                var p = PullOrError(3, program);
-                if (AllZeros(p)) program.Cmd(Command.ZeroV3);
-                else if (AllOnes(p)) program.Cmd(Command.OneV3);
-                else program.Cmd(Command.Vec3, p);
+                if (AllZeros(program, 3)) { program.Drop(3); program.Cmd(Command.ZeroV3); }
+                else if (AllOnes(program, 3)) { program.Drop(3); program.Cmd(Command.OneV3); }
+                else program.Cmd(Command.Vec3);
                 break;
             }
 
             case "/vec4":
             {
                 AssertArgumentCount(token, 4);
-                var p = PullOrError(4, program);
-                if (AllZeros(p)) program.Cmd(Command.ZeroV4);
-                else if (AllOnes(p)) program.Cmd(Command.OneV4);
-                else program.Cmd(Command.Vec4, p);
+                if (AllZeros(program, 4)) { program.Drop(4); program.Cmd(Command.ZeroV4); }
+                else if (AllOnes(program, 4)) { program.Drop(4); program.Cmd(Command.OneV4); }
+                else program.Cmd(Command.Vec4);
                 break;
             }
 
             case "/clamp":
                 AssertArgumentCount(token, 3); // 1 stays on the 'stack', 2 moved to args
-                program.Cmd(Command.Clamp, PullOrError(2,program));
+                program.Cmd(Command.Clamp);
                 break;
             
             case "/cross":
@@ -454,7 +451,7 @@ public class Compiler
             
             case "/lerp":
                 AssertArgumentCount(token,3);
-                program.Cmd(Command.Lerp, PullOrError(1,program));
+                program.Cmd(Command.Lerp);
                 break;
             
             case "/low":
@@ -480,7 +477,7 @@ public class Compiler
             
             case "/mul":
                 AssertArgumentCount(token, 5);
-                program.Cmd(Command.MatrixMul, PullOrError(4,program));
+                program.Cmd(Command.MatrixMul);
                 break;
             
             case "/neg":
@@ -518,10 +515,9 @@ public class Compiler
                 program.Cmd(Command.Rect);
                 break;
             
-            case "/ss":
-            case "/sig":
+            case "/mix":
                 AssertArgumentCount(token,3);
-                program.Cmd(Command.SmoothStep, PullOrError(1,program));
+                program.Cmd(Command.SmoothStep);
                 break;
             
             case "/sign":
@@ -544,9 +540,27 @@ public class Compiler
         }
     }
 
-    private static bool AllZeros(IEnumerable<double> doubles) => doubles.All(t => t == 0);
+    private static bool AllZeros(List<Cell> program, int count)
+    {
+        var upper = program.Count - 1;
+        var lower = upper - count + 1;
+        for (int i = lower; i <= upper; i++)
+        {
+            if (program[i].Cmd != Command.ZeroS) return false;
+        }
+        return true;
+    }
 
-    private static bool AllOnes(IEnumerable<double> doubles) => doubles.All(t => Math.Abs(t - 1) < 1E-6);
+    private static bool AllOnes(List<Cell> program, int count)
+    {
+        var upper = program.Count - 1;
+        var lower = upper - count + 1;
+        for (int i = lower; i <= upper; i++)
+        {
+            if (program[i].Cmd != Command.OneS) return false;
+        }
+        return true;
+    }
 
     private static void AssertArgumentCount(Token token, int expected)
     {
@@ -565,7 +579,7 @@ public class Compiler
                 break;
             
             case "pi":
-                program.Cmd(Command.Scalar, Math.PI);
+                program.Num(Math.PI);
                 break;
             
             default: throw new Exception($"Unknown constant-like token: '{token}'");
@@ -596,43 +610,6 @@ public class Compiler
             default: throw new Exception($"Invalid swizzle index: '{c}'");
         }
     }
-
-    /// <summary>
-    /// Pick cell off the end of the program to use as command parameters.
-    /// An exception is thrown if not enough cells are available, or if the cells
-    /// do not contain scalar values
-    /// </summary>
-    private static double[] PullOrError(int count, List<Cell> program)
-    {
-        var output = new double[count];
-        for (int i = count-1; i >= 0; i--) // order is important
-        {
-            if (program.Count < 1) throw new Exception("Not enough parameters");
-            
-            var candidate = AsScalar(program[^1]);
-            if (candidate.Cmd != Command.Scalar || candidate.Params.Length != 1) throw new Exception("Non-scalar value used for command parameter");
-            
-            output[i] = candidate.Params[0];
-            program.RemoveAt(program.Count - 1);
-        }
-        return output;
-    }
-
-    /// <summary>
-    /// Get a scalar value from the cell, if possible.
-    /// Otherwise returns the original cell.
-    /// This can un-do some early phase optimisations
-    /// </summary>
-    private static Cell AsScalar(Cell original)
-    {
-        return original.Cmd switch
-        {
-            Command.Scalar => original,
-            Command.OneS => new Cell { Cmd = Command.Scalar, Params = new[] { 1.0 } },
-            Command.ZeroS => new Cell { Cmd = Command.Scalar, Params = new[] { 0.0 } },
-            _ => original
-        };
-    }
 }
 
 /// <summary>
@@ -650,12 +627,44 @@ public static class CompilerExtensions
         if (string.IsNullOrWhiteSpace(value.Value)) return;
         stack.Push(value);
     }
+    
+    /// <summary>
+    /// Remove the last `count` program cells
+    /// </summary>
+    public static void Drop(this List<Cell> program, double count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            program.RemoveAt(program.Count - 1);
+        }
+    }
 
     /// <summary>
     /// Add a command to the program
     /// </summary>
-    public static void Cmd(this List<Cell> program, Command cmd, params double[] parameters)
+    public static void Cmd(this List<Cell> program, Command cmd)
     {
-        program.Add(new Cell { Cmd = cmd, Params = parameters });
+        program.Add(new Cell { Cmd = cmd });
+    }
+    
+    /// <summary>
+    /// Add a command to the program, pushing values onto the stack
+    /// </summary>
+    public static void Cmd(this List<Cell> program, Command cmd, params double[] values)
+    {
+        for (int i = 0; i < values.Length; i++)
+        {
+            program.Add(new Cell { Cmd = Command.Scalar, NumberValue = values[i] });
+        }
+
+        program.Add(new Cell { Cmd = cmd });
+    }
+    
+    /// <summary>
+    /// Add a command to the program
+    /// </summary>
+    public static void Num(this List<Cell> program, double num)
+    {
+        program.Add(new Cell { Cmd = Command.Scalar, NumberValue = num});
     }
 }

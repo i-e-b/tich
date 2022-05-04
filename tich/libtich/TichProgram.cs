@@ -152,18 +152,18 @@ public class TichProgram
 
             case Command.Clamp:
             {
-                if (step.Params.Length < 2) return stop;
-                var lower = step.Params[0];
-                var upper = step.Params[1];
+                CheckAvailable(stack, 3);
+                var upper = Pop(stack).X;
+                var lower = Pop(stack).X;
                 if (lower > upper) { (lower,upper)=(upper,lower); }
                 stack.Push(VMath.Clamp(Pop(stack), lower, upper));
                 return next;
             }
-            case Command.MatrixMul:
+            case Command.MatrixMul: // TODO: have a special kind that takes a vec4 instead of 4 scalars.
             {
-                if (step.Params.Length < 4) return stop;
+                CheckAvailable(stack, 5);
                 
-                stack.Push(VMath.MatrixMul4(Pop(stack), step.Params));
+                stack.Push(VMath.MatrixMul4(Pop(stack), PopArray(stack, 4)));
                 return next;
             }
             case Command.Less:
@@ -209,29 +209,34 @@ public class TichProgram
             
             case Command.Scalar:
             {
-                if (step.Params.Length < 1) return stop;
-                stack.Push(Variant.Scalar(step.Params[0]));
+                stack.Push(Variant.Scalar(step.NumberValue));
                 return next;
             }
             
             case Command.Vec2:
             {
-                if (step.Params.Length < 2) return stop;
-                stack.Push(Variant.Vec2(step.Params[0], step.Params[1]));
+                var y = Pop(stack);
+                var x = Pop(stack);
+                stack.Push(Variant.Vec2(x.Value, y.Value));
                 return next;
             }
             
             case Command.Vec3:
             {
-                if (step.Params.Length < 3) return stop;
-                stack.Push(Variant.Vec3(step.Params[0], step.Params[1], step.Params[2]));
+                var z = Pop(stack);
+                var y = Pop(stack);
+                var x = Pop(stack);
+                stack.Push(Variant.Vec3(x.Value, y.Value, z.Value));
                 return next;
             }
 
             case Command.Vec4:
             {
-                if (step.Params.Length < 4) return stop;
-                stack.Push(Variant.Vec4(step.Params[0], step.Params[1], step.Params[2], step.Params[3]));
+                var w = Pop(stack);
+                var z = Pop(stack);
+                var y = Pop(stack);
+                var x = Pop(stack);
+                stack.Push(Variant.Vec4(x.Value, y.Value, z.Value, w.Value));
                 return next;
             }
 
@@ -269,34 +274,34 @@ public class TichProgram
             
             case Command.Swz1:
             {
-                if (step.Params.Length != 1) return stop;
-                stack.Push(VMath.Swizzle(Pop(stack), step.Params));
+                var indexes = PopArray(stack, 1);
+                stack.Push(VMath.Swizzle(Pop(stack), indexes));
                 return next;
             }
             
             case Command.Swz2:
             {
-                if (step.Params.Length != 2) return stop;
-                stack.Push(VMath.Swizzle(Pop(stack), step.Params));
+                var indexes = PopArray(stack, 2);
+                stack.Push(VMath.Swizzle(Pop(stack), indexes));
                 return next;
             }
             case Command.Swz3:
             {
-                if (step.Params.Length != 3) return stop;
-                stack.Push(VMath.Swizzle(Pop(stack), step.Params));
+                var indexes = PopArray(stack, 3);
+                stack.Push(VMath.Swizzle(Pop(stack), indexes));
                 return next;
             }
             case Command.Swz4:
             {
-                if (step.Params.Length != 4) return stop;
-                stack.Push(VMath.Swizzle(Pop(stack), step.Params));
+                var indexes = PopArray(stack, 4);
+                stack.Push(VMath.Swizzle(Pop(stack), indexes));
                 return next;
             }
             
             case Command.SwzSplit3:
             {
-                if (step.Params.Length != 3) return stop;
-                stack.Push(VMath.SwizzleSplit(Pop(stack), step.Params, out var split));
+                var indexes = PopArray(stack, 3);
+                stack.Push(VMath.SwizzleSplit(Pop(stack), indexes, out var split));
                 stack.Push(split);
                 return next;
             }
@@ -325,8 +330,25 @@ public class TichProgram
         return stop;
     }
 
+    private static double[] PopArray(Stack<Variant> stack, int len)
+    {
+        if (len < 1) return Array.Empty<double>();
+        
+        var result = new double[len];
+        for (int i = len - 1; i >= 0; i--)
+        {
+            result[i] = stack.Pop().Value;
+        }
+        return result;
+    }
+
     private static Variant Pop(Stack<Variant> stack)
     {
         return stack.Count < 1 ? new Variant() : stack.Pop();
+    }
+
+    private static void CheckAvailable(Stack<Variant> stack, int required)
+    {
+        if (stack.Count < required) throw new Exception("Stack underflow");
     }
 }

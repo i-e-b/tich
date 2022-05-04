@@ -31,6 +31,9 @@ public class Variant
     /// </summary>
     public int Width = 0;
 
+    /// <summary> X value or zero </summary><remarks>A duplicate of `X`, to keep calling code more obvious</remarks>
+    public double Value { get => Values[0]; set => Values[0] = value;}
+    
     /// <summary> X value or zero </summary>
     public double X { get => Values[0]; set => Values[0] = value;}
     /// <summary> Y value or zero </summary>

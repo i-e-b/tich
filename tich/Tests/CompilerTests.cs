@@ -21,7 +21,7 @@ public class CompilerTests
     [TestCase("length(vec3(2,3,4).zx)", 4.472)] // swizzle 2. Length (4,2)
     [TestCase("length(vec3(2,3,4).yyy)", 5.196)] // swizzle 3. Length (3,3,3)
     [TestCase("length(vec3(2,3,4).zzxx)", 6.3245)] // swizzle 4. Length (4,4,2,2)
-    [TestCase("vec4(len(p - vec2(2,2)), p.x < 4, p.y < 4, p.y - p.x < 4)", 6.3245)] // more complex statement. IEB: re-think function argument merging.
+    [TestCase("all(vec4(len(p - vec2(2,2)), p.x < 4, p.y < 4, p.y - p.x < 4))", 0.0)] // more complex statement
     
     // TODO: assignment & multiple expressions
     // ReSharper restore StringLiteralTypo
@@ -54,10 +54,10 @@ public class CompilerTests
         Console.WriteLine(code.PrettyPrint());
         
         Assert.That(code[0].Cmd, Is.EqualTo(Command.Scalar), "value cmd");
-        Assert.That(code[0].Params[0], Is.EqualTo(Math.PI).Within(0.001), "scalar value");
-        Assert.That(code[1].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
-        Assert.That(code[1].Params[0], Is.EqualTo(0).Within(0.001), "clamp lower");
-        Assert.That(code[1].Params[1], Is.EqualTo(100).Within(0.001), "clamp upper");
+        Assert.That(code[0].NumberValue, Is.EqualTo(Math.PI).Within(0.001), "scalar value");
+        Assert.That(code[1].AsNumber(), Is.EqualTo(0).Within(0.001), "clamp lower");
+        Assert.That(code[2].AsNumber(), Is.EqualTo(100).Within(0.001), "clamp upper");
+        Assert.That(code[3].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
         
         // simple value
         expr = "clamp(0.3, 0, 1)";
@@ -69,12 +69,12 @@ public class CompilerTests
         Console.WriteLine(code.PrettyPrint());
         
         Assert.That(code[0].Cmd, Is.EqualTo(Command.Scalar), "value cmd");
-        Assert.That(code[0].Params[0], Is.EqualTo(0.3).Within(0.001), "scalar value");
-        Assert.That(code[1].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
-        Assert.That(code[1].Params[0], Is.EqualTo(0).Within(0.001), "clamp lower");
-        Assert.That(code[1].Params[1], Is.EqualTo(1).Within(0.001), "clamp upper");
+        Assert.That(code[0].NumberValue, Is.EqualTo(0.3).Within(0.001), "scalar value");
+        Assert.That(code[1].AsNumber(), Is.EqualTo(0).Within(0.001), "clamp lower");
+        Assert.That(code[2].AsNumber(), Is.EqualTo(1).Within(0.001), "clamp upper");
+        Assert.That(code[3].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
         
-        // TODO: compound value
+        // compound value
         expr = "clamp(length(p), 0, 1)";
         Console.WriteLine($"=============[ {expr} ]=====================");
         
@@ -85,10 +85,9 @@ public class CompilerTests
         
         // `p` should be elided
         Assert.That(code[0].Cmd, Is.EqualTo(Command.Length), "value cmd");
-        Assert.That(code[0].Params.Length, Is.EqualTo(0), "length params");
-        Assert.That(code[1].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
-        Assert.That(code[1].Params[0], Is.EqualTo(0).Within(0.001), "clamp lower");
-        Assert.That(code[1].Params[1], Is.EqualTo(1).Within(0.001), "clamp upper");
+        Assert.That(code[1].AsNumber(), Is.EqualTo(0).Within(0.001), "clamp lower");
+        Assert.That(code[2].AsNumber(), Is.EqualTo(1).Within(0.001), "clamp upper");
+        Assert.That(code[3].Cmd, Is.EqualTo(Command.Clamp), "clamp cmd");
     }
 
     [Test] // these pass P where appropriate to check the initial-P elision. 
@@ -129,8 +128,7 @@ public class CompilerTests
     [TestCase("vec2(1,1)", Command.OneV2)] // optimisation
     [TestCase("vec3(1,1,1)", Command.OneV3)] // optimisation
     [TestCase("vec4(1,1,1,1)", Command.OneV4)] // optimisation
-    [TestCase("sig(p,p,0.1)", Command.SmoothStep)]
-    [TestCase("ss(p,p,0.1)", Command.SmoothStep)]
+    [TestCase("mix(p,p,0.1)", Command.SmoothStep)]
     //[TestCase("p.xy, p.z", Command.SwzSplit3)] // TODO: maybe pick some kind of syntax for this... maybe generalise?
     [TestCase("0.0", Command.ZeroS)] // optimisation
     [TestCase("vec2(0,0)", Command.ZeroV2)] // optimisation
