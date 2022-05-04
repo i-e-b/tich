@@ -306,28 +306,31 @@ public class TichProgram
                 return next;
             }
             case Command.Midpoint:
-                break;
+                throw new Exception("Not yet implemented");
+
             case Command.SmoothStep:
-                break;
+                throw new Exception("not yet implemented");
+
             case Command.Lerp:
-                break;
+                throw new Exception("not yet implemented");
+
             case Command.Rect:
-                break;
+
+                throw new Exception("Not yet implemented");
             case Command.Lowest:
-                break;
+                throw new Exception("Not yet implemented");
             case Command.Highest:
-                break;
+                throw new Exception("Not yet implemented");
             case Command.MaxComponent:
-                break;
+                throw new Exception("Not yet implemented");
             case Command.Angle:
-                break;
+                throw new Exception("Not yet implemented");
             
             case Command.P:
                 throw new InvalidOperationException("Switch was passed a `P` command, which should have been handled elsewhere.");
             default:
                 throw new ArgumentOutOfRangeException($"Program has an unknown command: {step.Cmd}");
         }
-        return stop;
     }
 
     private static double[] PopArray(Stack<Variant> stack, int len)
