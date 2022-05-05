@@ -32,6 +32,7 @@ public class TichProgram
             }
 
             var end = NextStep(step, stack);
+            Console.WriteLine($" -> {string.Join(",",stack.Select(s=>s.ToString()))}");
             
             if (end)
             {
@@ -64,6 +65,8 @@ public class TichProgram
     {
         const bool next = false;
         const bool stop = true;
+        
+        Console.WriteLine($"{step} <- {string.Join(",",stack.Select(s=>s.ToString()))}");
         
         switch (step.Cmd)
         {

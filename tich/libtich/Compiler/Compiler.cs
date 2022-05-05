@@ -14,11 +14,13 @@ public class Compiler
     /// </summary>
     public static Stack<Token> InfixToPostfix(string expression)
     {
+        bool ok;
         var operands = new Stack<Token>();
         var postfix = new Stack<Token>();
 
         var tokens = expression.Tokens();
-        var ok = DefineFunctionArity(tokens);
+        
+        ok = DefineFunctionArity(tokens);
         if (!ok) throw new Exception("Unmatched braces in expression"); // TODO: better message
         
         foreach (var token in tokens)
@@ -30,19 +32,27 @@ public class Compiler
                 case TokenClass.Name:
                 case TokenClass.Operand:
 
-                    #region Test for uniary operator
-
+                    // Test for uniary operator
                     if (operands.HasItems()
                         && operands.Peek().Class == TokenClass.UniaryPrefix)
                     {
                         switch (operands.Peek().Value)
                         {
                             case "-":
-                                // turn a uniary minus and operand into a negative operand
+                                // flip sign of value
                                 operands.Pop();
-                                postfix.PushNotEmpty(token);
-                                postfix.Push(new Token("-1"));
-                                postfix.Push(new Token("*"));
+                                if (token.Class == TokenClass.Operand)
+                                {
+                                    token.Number = -token.Number;
+                                    token.Value = "-"+token.Value;
+                                    postfix.PushNotEmpty(token);
+                                }
+                                else
+                                {
+                                    postfix.PushNotEmpty(token);
+                                    postfix.Push(Token.ForFunction("/neg", 1));
+                                }
+
                                 break;
                             case "+":
                                 // no change to operand, remove uniary
@@ -52,10 +62,8 @@ public class Compiler
                             default:
                                 throw new Exception("Unexpected operator");
                         }
-
-                        #endregion
                     }
-                    else
+                    else // regular numeric value
                     {
                         postfix.Push(token);
                     }
@@ -65,6 +73,8 @@ public class Compiler
                     operands.Push(token);
                     break;
                 case TokenClass.UniaryPrefix:
+                    operands.Push(token);
+                    break;
                 case TokenClass.Function:
                 case TokenClass.OpenBracket:
 
@@ -77,7 +87,7 @@ public class Compiler
                         {
                             case "-":
                                 // change value, which will get picked up on bracket close
-                                token.Value = "-";
+                                token.Value = ParenNeg;
                                 operands.Pop(); // remove uniary
                                 operands.PushNotEmpty(token); // push bracket
                                 break;
@@ -152,12 +162,11 @@ public class Compiler
 
                     if (operands.HasItems())
                     {
-                        Token ob = operands.Pop(); // check open bracket
-                        if (ob.Value == "-")
+                        var ob = operands.Pop(); // check open bracket
+                        if (ob.Value == ParenNeg)
                         {
                             // invert value
-                            postfix.Push(new Token("-1"));
-                            postfix.Push(new Token("*"));
+                            postfix.Push(Token.ForFunction("/neg",1));
                         }
                     }
 
@@ -172,6 +181,9 @@ public class Compiler
 
                     break;
 
+                case TokenClass.Nothing:
+                    break;
+                
                 default:
                     throw new Exception("Unexpected token: " + token.Value);
             } // end of switch
@@ -188,6 +200,8 @@ public class Compiler
         foreach (var t in postfix) output.PushNotEmpty(t);
         return output;
     }
+
+    private const string ParenNeg = "NEG(";
 
     /// <summary>
     /// Compile a set of postfix tokens into Tich interpreter commands

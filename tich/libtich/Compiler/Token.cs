@@ -30,6 +30,16 @@ public class Token
     public double Number { get; set; }
 
     /// <summary>
+    /// Return a new token that represents an invalid internal state
+    /// </summary>
+    public static Token Invalid => new() {Class = TokenClass.Nothing, Value = ""};
+
+    /// <summary>
+    /// returns true if this token is a 'nothing' class
+    /// </summary>
+    public bool IsNothing => Class == TokenClass.Nothing;
+
+    /// <summary>
     /// Token for a string
     /// </summary>
     /// <param name="value"></param>
@@ -111,5 +121,29 @@ public class Token
             Number = Number
         };
         return result;
+    }
+
+    /// <summary>
+    /// Returns true iff this token is Operator class and the values match
+    /// </summary>
+    public bool IsOperator(string value)
+    {
+        return Class==TokenClass.BinaryOperator && Value == value;
+    }
+
+    /// <summary>
+    /// Create a token for a function call
+    /// </summary>
+    public static Token ForFunction(string name, int parameterCount)
+    {
+        return new Token
+        {
+            Class = TokenClass.Function,
+            Precedence = 100,
+            Value = name,
+            Direction = Association.LeftToRight,
+            ParameterCount = parameterCount,
+            Number = 0
+        };
     }
 }

@@ -5,6 +5,12 @@
 /// </summary>
 public enum TokenClass
 {
+
+    /// <summary>
+    /// A token that represents nothing (invalid, used internally)
+    /// </summary>
+    Nothing,
+    
     /// <summary>
     /// A value expressed as a numeric string or a constant name
     /// </summary>

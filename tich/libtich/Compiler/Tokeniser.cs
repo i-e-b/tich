@@ -76,14 +76,15 @@ static class Tokeniser
                 for (int i = 0; i < bits.Length; i++)
                 {
                     var prefix = i == 0 ? "" : ".";
-                    output.Add(t.Split(prefix + bits[i]));
+                    var candidate = t.Split(prefix + bits[i]);
+                    if (!candidate.IsEmpty) output.Add(candidate);
                 }
                 continue;
             }
 
             #endregion
 
-            output.Add(t);
+            if (!t.IsEmpty) output.Add(t);
         }
 
         return output;

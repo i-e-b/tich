@@ -42,6 +42,26 @@ public class CompilerTests
     }
 
     [Test]
+    [TestCase("-2 - -1 * -10 - -1 - -(-1 - -2)", -10.0)]
+    [TestCase("-(-2 - -1) * -(-10 - -1) - -(-1 - -2)", 10.0)]
+    [TestCase("-pi - -pi", 0)] // -π + π
+    public void negation_torture_test(string expr, double expected)
+    {
+        Console.WriteLine($"Interpreting ({expr})");
+        var postfix = Compiler.InfixToPostfix(expr);
+        Assert.That(postfix, Is.Not.Null);
+        Console.WriteLine(postfix.PrettyPrint());
+        
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        Assert.That(code, Is.Not.Null);
+        Console.WriteLine(code.PrettyPrint());
+        
+        var program = new TichProgram(code);
+        var result = program.CalculateForPoint(5,7); // length is ~= 8.60232
+        Assert.That(result, Is.EqualTo(expected).Within(0.001));
+    }
+
+    [Test]
     public void expression_with_stack_and_param_use()
     {
         // named value
