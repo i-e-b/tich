@@ -158,7 +158,7 @@ public enum Command : byte
     /// <summary> Sigmoid interpolate between 2 values, choosing the a scaled value where 0=a, 1=b, stack:2->1, params:1 </summary>
     SmoothStep,
     
-    /// <summary> Given a vec4 for T/L/B/R edges, return a vector from the centre to one corner of a rectangle, stack:1->1, params:0 </summary>
+    /// <summary> Given two vec2 that are any opposite corners of a rectangle, return a vec2 from the centre to one corner of a rectangle, stack:2->1, params:0 </summary>
     Rect,
     /// <summary> Component-wise minimum across 2 vectors, stack:2->1, params:0</summary>
     Lowest,

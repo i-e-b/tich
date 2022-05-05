@@ -136,7 +136,7 @@ public class CompilerTests
     [TestCase("not(p)", Command.Not)]
     [TestCase("pow(p,p)", Command.Pow)]
     [TestCase("rec(p)", Command.Reciprocal)] // todo: peephole opt for expression that means this
-    [TestCase("rect(p)", Command.Rect)]
+    [TestCase("rect(vec2(0,4),vec2(3,0))", Command.Rect)]
     [TestCase("sign(p)", Command.Sign)]
     [TestCase("sin(p)", Command.Sin)]
     [TestCase("sqrt(p)", Command.Sqrt)]

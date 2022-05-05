@@ -124,15 +124,7 @@ public class Token
     }
 
     /// <summary>
-    /// Returns true iff this token is Operator class and the values match
-    /// </summary>
-    public bool IsOperator(string value)
-    {
-        return Class==TokenClass.BinaryOperator && Value == value;
-    }
-
-    /// <summary>
-    /// Create a token for a function call
+    /// Create a token for an injected function call. This is given a high precedence to prevent it being moved.
     /// </summary>
     public static Token ForFunction(string name, int parameterCount)
     {

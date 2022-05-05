@@ -109,7 +109,7 @@ public class BasicProgramTests
     [TestCase("acos(0.2)", 1.3694)]
     [TestCase("all(vec3(1,1,1))", 1.0)]
     [TestCase("and(1,0)", 0.0)]
-    [TestCase("angle(p)", 0.0)]
+    [TestCase("angle(pi)", -1.0)]
     [TestCase("clamp(p, 0, 1)", 1.0)]
     [TestCase("cos(p)", 0.96017)]
     [TestCase("cross(p,vec2(3,2))", 36.0)]
@@ -118,11 +118,11 @@ public class BasicProgramTests
     [TestCase("high(3,5)", 5)]
     [TestCase("length(p)", 10.0)]
     [TestCase("len(p)", 10.0)]
-    [TestCase("lerp(vec2(0,0),p, 0.5)", 0.0)]
+    [TestCase("lerp(vec2(0,0),p, 0.5)", 3.0)]
     [TestCase("low(vec2(0,0),p)", 0.0)]
     [TestCase("max(vec2(0,0),p)", 6.0)]
     [TestCase("mul(p,1,2,3,4)", 24.0)]
-    [TestCase("mid(p,p*2)", 0.0)]
+    [TestCase("mid(p,p*2)", 9.0)]
     [TestCase("min(vec2(0,0),p)", 0.0)]
     [TestCase("neg(p)", -6.0)]
     [TestCase("none(p)", 0)]
@@ -130,19 +130,19 @@ public class BasicProgramTests
     [TestCase("not(p)", 0)]
     [TestCase("pow(p,p)", 46656.0)]
     [TestCase("rec(p)", 0.1667)]
-    [TestCase("rect(vec4(-1,-2,3,4))", 0.0)]
+    [TestCase("rect(vec2(-1,-2),vec2(3,4))", 2.0)]
     [TestCase("sign(p)", 1)]
     [TestCase("sin(p)", -0.279415)]
     [TestCase("sqrt(p)", 2.449489)]
     [TestCase("vec2(0,1)", 0.0)]
     [TestCase("vec3(0,1,2)", 0.0)]
     [TestCase("vec4(0,1,2,3)", 0.0)]
-    [TestCase("maxC(p)", 0.0)]
+    [TestCase("maxC(p)", 8.0)]
     [TestCase("1.0", 1.0)] // optimisation
     [TestCase("vec2(1,1)", 1.0)] // optimisation
     [TestCase("vec3(1,1,1)", 1.0)] // optimisation
     [TestCase("vec4(1,1,1,1)", 1.0)] // optimisation
-    [TestCase("mix(p,p,0.1)", 0.0)]
+    [TestCase("mix(p,p*2,0.1)", 6.120)]
     [TestCase("0.0", 0.0)] // optimisation
     [TestCase("vec2(0,0)", 0.0)] // optimisation
     [TestCase("vec3(0,0,0)", 0.0)] // optimisation

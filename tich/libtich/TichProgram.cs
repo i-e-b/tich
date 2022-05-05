@@ -309,25 +309,51 @@ public class TichProgram
                 return next;
             }
             case Command.Midpoint:
-                throw new Exception("Not yet implemented");
-
-            case Command.SmoothStep:
-                throw new Exception("not yet implemented");
+            {
+                stack.Push(VMath.Lerp(Pop(stack), Pop(stack), 0.5));
+                return next;
+            }
 
             case Command.Lerp:
-                throw new Exception("not yet implemented");
+            {
+                var indexes = PopArray(stack, 1);
+                stack.Push(VMath.Lerp(Pop(stack), Pop(stack), indexes[0]));
+                return next;
+            }
+
+            case Command.SmoothStep: // this is a lerp, but with a gain function applied to the proportion
+            {
+                var prop = VMath.Gain(PopArray(stack, 1)[0], 2);
+                stack.Push(VMath.Lerp(Pop(stack), Pop(stack), prop));
+                return next;
+            }
 
             case Command.Rect:
-
-                throw new Exception("Not yet implemented");
+            {
+                stack.Push(VMath.RectangleVector(Pop(stack),Pop(stack)));
+                return next;
+            }
+            
             case Command.Lowest:
-                throw new Exception("Not yet implemented");
+            {
+                stack.Push(VMath.PairwiseMin(Pop(stack), Pop(stack)));
+                return next;
+            }
             case Command.Highest:
-                throw new Exception("Not yet implemented");
+            {
+                stack.Push(VMath.PairwiseMax(Pop(stack), Pop(stack)));
+                return next;
+            }
             case Command.MaxComponent:
-                throw new Exception("Not yet implemented");
+            {
+                stack.Push(VMath.ComponentMax(Pop(stack)));
+                return next;
+            }
             case Command.Angle:
-                throw new Exception("Not yet implemented");
+            {
+                stack.Push(VMath.Angle(Pop(stack)));
+                return next;
+            }
             
             case Command.P:
                 throw new InvalidOperationException("Switch was passed a `P` command, which should have been handled elsewhere.");

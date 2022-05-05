@@ -525,7 +525,7 @@ public class Compiler
                 break;
             
             case "/rect":
-                AssertArgumentCount(token,1);
+                AssertArgumentCount(token,2);
                 program.Cmd(Command.Rect);
                 break;
             

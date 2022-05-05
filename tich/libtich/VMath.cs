@@ -375,4 +375,55 @@ internal class VMath
         split = Variant.Scalar(vC);
         return Variant.Vec2(vA, vB);
     }
+
+    public static Variant Lerp(Variant b, Variant a, double prop)
+    {
+        if (prop == 0.0) return a;
+        if (Math.Abs(prop - 1.0) < EqualityDifference) return b;
+
+        /* var c = (b-a) * prop;
+         c += a;
+         */
+
+        var c = PairwiseSubtract(a.Copy(), b); // remember parameters are backwards!
+        c = PairwiseMultiply(Variant.Scalar(prop), c);
+        c = PairwiseAdd(a, c);
+
+        return c;
+    }
+
+    public static Variant ComponentMax(Variant v)
+    {
+        var m = v.X;
+        for (int i = 1; i < v.Width; i++)
+        {
+            m = Math.Max(m, v.Values[i]);
+        }
+        return Variant.Scalar(m);
+    }
+
+    public static Variant RectangleVector(Variant vb, Variant va)
+    {
+        var l = Math.Min(va.X, vb.X);
+        var r = Math.Max(va.X, vb.X);
+        var t = Math.Min(va.Y, vb.Y);
+        var b = Math.Max(va.Y, vb.Y);
+            
+        var hw = (r-l)/2.0;
+        var hh = (b-t)/2.0;
+            
+        return Variant.Vec2(hw, hh);
+    }
+
+    public static Variant Angle(Variant v)
+    {
+        var radians = v.X;
+        return Variant.Vec2(Math.Cos(radians), Math.Sin(radians));
+    }
+
+    public static double Gain(double x, double k) 
+    {
+        var a = 0.5 * Math.Pow(2.0 * ((x < 0.5) ? x : 1.0 - x), k);
+        return (x < 0.5) ? a : 1.0 - a;
+    }
 }

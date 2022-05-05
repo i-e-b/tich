@@ -91,4 +91,19 @@ public class Variant
             Width = 4
         };
     }
+
+    /// <summary>
+    /// Copy this variant's values into a new instance
+    /// </summary>
+    public Variant Copy()
+    {
+        return new Variant
+        {
+            Width = Width,
+            X = X,
+            Y = Y,
+            Z = Z,
+            W = W
+        };
+    }
 }
