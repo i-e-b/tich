@@ -14,7 +14,7 @@ public static class TichRenderer
     ///
     /// 
     /// </summary>
-    public static double[,] RenderLayer(TichProgram prog, int width, int height)
+    public static double[,] RenderLayer(TichProgram prog, int width, int height, double dx, double dy)
     {
         // simple scan-wise stepping algorithm
         var outp = new double[width,height];
@@ -29,7 +29,7 @@ public static class TichRenderer
             int x = 0;
             while (x < width)
             {
-                var dist = prog.CalculateForPoint(x,y);
+                var dist = prog.CalculateForPoint(x-dx,y-dy);
                 var step = Math.Max(1, (int)Math.Abs(dist));
                 var end = Math.Min(width, x+step);
                 

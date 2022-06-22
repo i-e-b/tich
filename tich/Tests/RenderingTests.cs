@@ -13,13 +13,13 @@ public class RenderingTests
     [Test]
     public void basic_circle()
     {
-        var prog = TichProgram.Compile("len(p - 10)-5"); // radius 5 circle at (10,10)
+        var prog = TichProgram.Compile("len(p)-5"); // radius 5 circle at (0,0)
         var ser = prog.Serialise();
         Console.WriteLine($"Program {ser.Length} bytes: {string.Join("", ser.Select(v=>v.ToString("X2")))}");
         
         var sw = new Stopwatch();
         sw.Start();
-        var result = TichRenderer.RenderLayer(prog, 24, 24);
+        var result = TichRenderer.RenderLayer(prog, 24, 24, 10, 10);
         sw.Stop();
         Console.WriteLine($"Render took {sw.Elapsed}");
         
@@ -37,5 +37,26 @@ public class RenderingTests
             }
             Console.WriteLine(sb.ToString());
         }
+    }
+
+    [Test]
+    [TestCase("ring", "abs(len(p) - 52) - 5", 128, 128)]
+    [TestCase("non-square_wide", "length(abs(p)-min(abs(p).x+abs(p).y, 64)*0.5) - 16", 256, 128)]
+    public void test_cases(string name, string expression, int width, int height)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var prog = TichProgram.Compile(expression); // radius 5 circle at (10,10)
+        var ser = prog.Serialise();
+
+        Console.WriteLine($"Render took {sw.Elapsed}");
+        Console.WriteLine($"Program {ser.Length} bytes: {string.Join("", ser.Select(v => v.ToString("X2")))}");
+
+        sw.Restart();
+        var result = TichRenderer.RenderLayer(prog, width, height, 64, 64);
+        sw.Stop();
+        Console.WriteLine($"Render took {sw.Elapsed}");
+
+        result.ToImage($"C:\\temp\\{name}.bmp");
     }
 }
