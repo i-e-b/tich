@@ -18,5 +18,31 @@ public static class TichRenderer
     {
         // simple scan-wise stepping algorithm
         var outp = new double[width,height];
+        
+        // for each horizontal line, we start at the left, and step by the absolute distance of the field
+        // or 1 pixel, whichever is more.
+        // the colour of the field is the distance from the edge pinned to a range of 0.0..1.0
+        // this gives us a spherical window anti-aliasing at the edges (assuming the program is L-0 norm).
+
+        for (int y = 0; y < height; y++)
+        {
+            int x = 0;
+            while (x < width)
+            {
+                var dist = prog.CalculateForPoint(x,y);
+                var step = Math.Max(1, (int)Math.Abs(dist));
+                var end = Math.Min(width, x+step);
+                
+                var value = Math.Min(1.0, Math.Max(0.0, dist));
+                    
+                // fill gap to next point
+                while (x < end)
+                {
+                    outp[x++, y] = value;
+                }
+            }
+        }
+        
+        return outp;
     }
 }

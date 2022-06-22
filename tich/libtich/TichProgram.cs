@@ -14,6 +14,16 @@ public class TichProgram
     {
         _program = program.ToList();
     }
+    
+    /// <summary>
+    /// Create a new tich program from a math expression
+    /// </summary>
+    public static TichProgram Compile(string expression)
+    {
+        var postfix = Compiler.InfixToPostfix(expression);
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        return new TichProgram(code);
+    }
 
     /// <summary>
     /// Evaluate the program against an initial stack, which will be mutated.
@@ -32,11 +42,11 @@ public class TichProgram
             }
 
             var end = NextStep(step, stack);
-            Console.WriteLine($" -> {string.Join(",",stack.Select(s=>s.ToString()))}");
+            //Console.WriteLine($" -> {string.Join(",",stack.Select(s=>s.ToString()))}");
             
             if (end)
             {
-                Console.WriteLine($"Early stop at {i} ({step.Cmd})");
+                //Console.WriteLine($"Early stop at {i} ({step.Cmd})");
                 break;
             }
         }
@@ -57,6 +67,22 @@ public class TichProgram
         if (stack.Count < 1) return double.NaN; // callers must handle this case
         return stack.Pop().Values[0]; // X component or scalar of stack top
     }
+    
+    
+    /// <summary>
+    /// Convert this program to a storage format
+    /// </summary>
+    /// <returns></returns>
+    public byte[] Serialise()
+    {
+        var list = new List<byte>();
+        foreach (var cell in _program)
+        {
+            list.AddRange(cell.ToByteString());
+        }
+        return list.ToArray();
+    }
+    
 
     /// <summary>
     /// Giant switch that rules the program
@@ -66,7 +92,7 @@ public class TichProgram
         const bool next = false;
         const bool stop = true;
         
-        Console.WriteLine($"{step} <- {string.Join(",",stack.Select(s=>s.ToString()))}");
+        //Console.WriteLine($"{step} <- {string.Join(",",stack.Select(s=>s.ToString()))}");
         
         switch (step.Cmd)
         {
