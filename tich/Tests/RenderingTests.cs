@@ -42,6 +42,8 @@ public class RenderingTests
     [Test]
     [TestCase("ring", "abs(len(p) - 52) - 5", 128, 128)]
     [TestCase("non-square_wide", "length(abs(p)-min(abs(p).x+abs(p).y, 64)*0.5) - 16", 256, 128)]
+    [TestCase("non-square_tall", "length(abs(p)-min(abs(p).x+abs(p).y, 64)*0.5) - 16", 128, 256)]
+    [TestCase("large", "len(p - 448)-384", 1024, 1024)]
     public void test_cases(string name, string expression, int width, int height)
     {
         var sw = new Stopwatch();
@@ -49,7 +51,7 @@ public class RenderingTests
         var prog = TichProgram.Compile(expression); // radius 5 circle at (10,10)
         var ser = prog.Serialise();
 
-        Console.WriteLine($"Render took {sw.Elapsed}");
+        Console.WriteLine($"Compile took {sw.Elapsed}");
         Console.WriteLine($"Program {ser.Length} bytes: {string.Join("", ser.Select(v => v.ToString("X2")))}");
 
         sw.Restart();
