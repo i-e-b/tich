@@ -5,6 +5,9 @@ namespace libtich;
 /// </summary>
 public enum Command : byte
 {
+    // TODO: IEB: The stack and param descriptions are out-of-date. Only 'Scalar' has params.
+    
+    
     /// <summary>
     /// Not a valid command
     /// </summary>
@@ -15,7 +18,7 @@ public enum Command : byte
     /// </summary>
     Scalar,
 
-    // Math. Component-wise unless otherwise noted
+    #region Math. Component-wise unless otherwise noted
     /// <summary> Cosine, stack:1->1, params:0 </summary>
     Cos,
     /// <summary> Arc cosine, stack:1->1, params:0 </summary>
@@ -64,7 +67,9 @@ public enum Command : byte
     /// <summary> multiply vec2 by matrix4, stack:1->1, params:4 </summary>
     MatrixMul,
 
-    // Comparisons. Outcomes are false=0, true=1
+    #endregion
+    
+    #region Comparisons. Outcomes are false=0, true=1
 
     /// <summary> (a &lt; b) ? 1 : 0, stack:2->1, params:0 </summary>
     Less,
@@ -90,8 +95,9 @@ public enum Command : byte
     /// <summary> (a == 0) ? 1 : 0, stack:1->1, params:0  </summary>
     Not,
 
+    #endregion
 
-    // Values (from params to stack)
+    #region Values (either special, or packing stack)
     
     /// <summary> the point being calculated, stack:0->1, params:0  </summary>
     P,
@@ -117,8 +123,10 @@ public enum Command : byte
     OneV3,
     /// <summary> vec4 {1,1,1,1} onto stack, stack:0->1, params:0  </summary>
     OneV4,
+    
+    #endregion
 
-    // Swizzles (picking and rearranging vector elements)
+    #region Swizzles (picking and rearranging vector elements)
 
     /// <summary>
     /// pick p1 of any vector into a scalar, stack:1->1, params:1; vector slots are {X=0, Y=1, Z=2, W=3}
@@ -147,7 +155,9 @@ public enum Command : byte
     /// </summary>
     SwzSplit3,
 
-    // Specials
+    #endregion
+    
+    #region Specials
     
     /// <summary> Interpolate between 2 values, choosing the midpoint, stack:2->1, params:0 </summary>
     Midpoint,
@@ -168,8 +178,86 @@ public enum Command : byte
     MaxComponent,
     
     /// <summary> Given an angle in radians, return a unit vec2 representing that angle, stack:1->1, params:0 </summary>
-    Angle
+    Angle,
     
+    #endregion
+    
+    #region Register commands ([A,B,C,D,E,F,G,H,I,J,K,L,M,N] for temp variables etc. Registers all start as scalar zero)
+    
+    /// <summary> Update the value of P for rest of the calculation </summary>
+    MoveP,
+    
+    /// <summary> Update the value of A for rest of the calculation </summary>
+    SetA,
+    /// <summary> Push current value of A onto stack </summary>
+    GetA,
+    
+    /// <summary> Update the value of B for rest of the calculation </summary>
+    SetB,
+    /// <summary> Push current value of B onto stack </summary>
+    GetB,
+    
+    /// <summary> Update the value of C for rest of the calculation </summary>
+    SetC,
+    /// <summary> Push current value of C onto stack </summary>
+    GetC,
+    
+    /// <summary> Update the value of D for rest of the calculation </summary>
+    SetD,
+    /// <summary> Push current value of D onto stack </summary>
+    GetD,
+    
+    /// <summary> Update the value of E for rest of the calculation </summary>
+    SetE,
+    /// <summary> Push current value of E onto stack </summary>
+    GetE,
+    
+    /// <summary> Update the value of F for rest of the calculation </summary>
+    SetF,
+    /// <summary> Push current value of F onto stack </summary>
+    GetF,
+    
+    /// <summary> Update the value of G for rest of the calculation </summary>
+    SetG,
+    /// <summary> Push current value of G onto stack </summary>
+    GetG,
+    
+    /// <summary> Update the value of H for rest of the calculation </summary>
+    SetH,
+    /// <summary> Push current value of H onto stack </summary>
+    GetH,
+    
+    /// <summary> Update the value of I for rest of the calculation </summary>
+    SetI,
+    /// <summary> Push current value of I onto stack </summary>
+    GetI,
+    
+    /// <summary> Update the value of J for rest of the calculation </summary>
+    SetJ,
+    /// <summary> Push current value of J onto stack </summary>
+    GetJ,
+    
+    /// <summary> Update the value of K for rest of the calculation </summary>
+    SetK,
+    /// <summary> Push current value of K onto stack </summary>
+    GetK,
+    
+    /// <summary> Update the value of L for rest of the calculation </summary>
+    SetL,
+    /// <summary> Push current value of L onto stack </summary>
+    GetL,
+    
+    /// <summary> Update the value of M for rest of the calculation </summary>
+    SetM,
+    /// <summary> Push current value of M onto stack </summary>
+    GetM,
+    
+    /// <summary> Update the value of N for rest of the calculation </summary>
+    SetN,
+    /// <summary> Push current value of N onto stack </summary>
+    GetN,
+    
+    #endregion
     
     // any extra commands here. can't have more than 127 values, as the top bit is a flag.
 }

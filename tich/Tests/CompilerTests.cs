@@ -1,14 +1,36 @@
 ﻿using libtich;
 using NUnit.Framework;
 // ReSharper disable AssignNullToNotNullAttribute
+// ReSharper disable StringLiteralTypo
 
 namespace Tests;
 
 [TestFixture]
 public class CompilerTests
 {
+    [Test(Description =
+        "The ';' character separates expressions. Last expression of a set is the calculated value. All others must set a register value." +
+        "Register names are case insensitive. The last ';' is optional." +
+        "The name of the register being set is the only character to the left of a single ':'. To the right is the expression setting the value.")]
+    [TestCase("a: p.x + p.y; p - a", -7.0)] // last ';' not present
+    [TestCase("a: p.x + p.y; p - a;", -7.0)] // last ';' is present
+    public void assignment_and_reading(string expr, double expected)
+    {
+        Console.WriteLine($"Interpreting ({expr})");
+        var postfix = Compiler.InfixToPostfix(expr);
+        Assert.That(postfix, Is.Not.Null);
+        Console.WriteLine(postfix.PrettyPrint());
+        
+        var code = Compiler.CompilePostfix(postfix).ToList();
+        Assert.That(code, Is.Not.Null);
+        Console.WriteLine(code.PrettyPrint());
+        
+        var program = new TichProgram(code);
+        var result = program.CalculateForPoint(5,7); // length is ~= 8.60232
+        Assert.That(result, Is.EqualTo(expected).Within(0.001));
+    }
+
     [Test]
-    // ReSharper disable StringLiteralTypo
     [TestCase("5.0 - 3.0", 2.0)] // scalars either side of an operator
     [TestCase("length(p) - 3.0", 5.602325)] // scalar to right of operator
     [TestCase("8.0 - length(p)", -0.60232)] // scalar to left of operator
@@ -22,9 +44,6 @@ public class CompilerTests
     [TestCase("length(vec3(2,3,4).yyy)", 5.196)] // swizzle 3. Length (3,3,3)
     [TestCase("length(vec3(2,3,4).zzxx)", 6.3245)] // swizzle 4. Length (4,4,2,2)
     [TestCase("all(vec4(len(p - vec2(2,2)), p.x < 4, p.y < 4, p.y - p.x < 4))", 0.0)] // more complex statement
-    
-    // TODO: assignment & multiple expressions
-    // ReSharper restore StringLiteralTypo
     public void expression_tests(string expr, double expected)
     {
         Console.WriteLine($"Interpreting ({expr})");
