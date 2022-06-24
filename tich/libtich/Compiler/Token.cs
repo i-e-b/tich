@@ -40,6 +40,11 @@ public class Token
     public bool IsNothing => Class == TokenClass.Nothing;
 
     /// <summary>
+    /// The value of this function should be negated
+    /// </summary>
+    public bool Negated { get; set; }
+
+    /// <summary>
     /// Token for a string
     /// </summary>
     /// <param name="value"></param>

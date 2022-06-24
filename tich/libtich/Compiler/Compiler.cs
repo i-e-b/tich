@@ -9,6 +9,69 @@ using System.Collections.Generic;
 public class Compiler
 {
     /// <summary>
+    /// Compile a full program string (including sub-expressions and assignments)
+    /// into a list of executable cells.
+    /// </summary>
+    public static IEnumerable<Cell> CompileProgram(string programString)
+    {
+        const int register = 0;
+        const int expression = 1;
+        const StringSplitOptions clean = StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries;
+        
+        
+        var result = new List<Cell>();
+        var expressions = programString.Split(';', clean);
+        
+        var exprCount = 0;
+
+        for (int i = 0; i < expressions.Length - 1; i++) // all assignment sub-expressions
+        {
+            var assignment = expressions[i].Split(':', clean);
+            if (assignment.Length != 2)
+            {
+                throw new Exception($"Invalid assignment. {assignment.Length} parts, should be 2. Too many ':' in sub-expression? '{expressions[i]}'");
+            }
+
+            var assignCell = MapRegister(assignment[register]);
+            
+            var postfix = InfixToPostfix(assignment[expression]);
+            var code = CompilePostfix(postfix, exprCount == 0);
+            result.AddRange(code);
+            result.Add(assignCell);
+            exprCount++;
+        }
+        
+        // Last (or only) expression:
+        result.AddRange(CompilePostfix(InfixToPostfix(expressions[^1]), exprCount == 0));
+        return result;
+    }
+
+    private static Cell MapRegister(string s)
+    {
+        s = s.Trim().ToLowerInvariant();
+        return s switch
+        {
+            "a" => new Cell { Cmd = Command.SetA },
+            "b" => new Cell { Cmd = Command.SetB },
+            "c" => new Cell { Cmd = Command.SetC },
+            "d" => new Cell { Cmd = Command.SetD },
+            "e" => new Cell { Cmd = Command.SetE },
+            "f" => new Cell { Cmd = Command.SetF },
+            "g" => new Cell { Cmd = Command.SetG },
+            "h" => new Cell { Cmd = Command.SetH },
+            "i" => new Cell { Cmd = Command.SetI },
+            "j" => new Cell { Cmd = Command.SetJ },
+            "k" => new Cell { Cmd = Command.SetK },
+            "l" => new Cell { Cmd = Command.SetL },
+            "m" => new Cell { Cmd = Command.SetM },
+            "n" => new Cell { Cmd = Command.SetN },
+            
+            "p" => new Cell { Cmd = Command.MoveP },
+            _ => throw new Exception($"Invalid assignment: no such register '{s}'")
+        };
+    }
+
+    /// <summary>
     /// Transform an infix expression string into a set of postfix tokens.
     /// This handles order of association, parenthesis, etc.
     /// </summary>
@@ -22,6 +85,8 @@ public class Compiler
         
         ok = DefineFunctionArity(tokens);
         if (!ok) throw new Exception("Unmatched braces in expression"); // TODO: better message
+        
+        tokens = FixupNegatedFunctions(tokens);
         
         foreach (var token in tokens)
         {
@@ -201,12 +266,42 @@ public class Compiler
         return output;
     }
 
+    /// <summary>
+    ///  deal with the case of `...( - func(...) )...`
+    /// </summary>
+    private static List<Token> FixupNegatedFunctions(List<Token> tokens)
+    {
+        var result = new List<Token>(tokens.Count);
+
+        for (var index = 0; index < tokens.Count; index++)
+        {
+            var token = tokens[index];
+
+            if (index < tokens.Count - 2
+                && token.Value == "(" && tokens[index + 1].Value == "-" && tokens[index + 2].Value.StartsWith('/'))
+            {
+                result.Add(token); // keep paren
+                var func = tokens[index + 2];
+                func.Negated = true;
+                result.Add(func); // keep function
+                index += 2; // skip the negative symbol
+            }
+            else
+            {
+                result.Add(token);
+            }
+        }
+
+
+        return result;
+    }
+
     private const string ParenNeg = "NEG(";
 
     /// <summary>
     /// Compile a set of postfix tokens into Tich interpreter commands
     /// </summary>
-    public static IEnumerable<Cell> CompilePostfix(Stack<Token> postfix)
+    public static IEnumerable<Cell> CompilePostfix(Stack<Token> postfix, bool canElideP = true)
     {
         // very simple for the moment, doesn't handle variables or functions
 
@@ -288,7 +383,11 @@ public class Compiler
                     {
                         HandleOperand(program, token);
                     }
-                    else if (token.Value.StartsWith("/")) HandleFunctionLikeToken(token, program);
+                    else if (token.Value.StartsWith("/"))
+                    {
+                        HandleFunctionLikeToken(token, program);
+                        if (token.Negated) program.Cmd(Command.Neg);
+                    }
                     else if (token.Value.StartsWith(".")) HandleSwizzle(token, program);
                     else
                     {
@@ -299,7 +398,7 @@ public class Compiler
             }
         } // end foreach
         
-        if (program.Count > 0 && program[0].Cmd == Command.P)
+        if (canElideP && program.Count > 0 && program[0].Cmd == Command.P)
         {
             program.RemoveAt(0); // we get a 'free' P at the start of the program
         }
@@ -381,6 +480,10 @@ public class Compiler
             case "/acos":
                 AssertArgumentCount(token, 1);
                 program.Cmd(Command.Acos);
+                break;
+            case "/atan":
+                AssertArgumentCount(token, 2);
+                program.Cmd(Command.Atan);
                 break;
             case "/all":
                 AssertArgumentCount(token, 1);
@@ -588,15 +691,33 @@ public class Compiler
     {
         switch (token)
         {
+            // special register 'P'
             case "p":
                 program.Cmd(Command.P);
                 break;
             
+            // constants
             case "pi":
                 program.Num(Math.PI);
                 break;
             
-            default: throw new Exception($"Unknown constant-like token: '{token}'");
+            // registers
+            case "a": program.Cmd(Command.GetA); break;
+            case "b": program.Cmd(Command.GetB); break;
+            case "c": program.Cmd(Command.GetC); break;
+            case "d": program.Cmd(Command.GetD); break;
+            case "e": program.Cmd(Command.GetE); break;
+            case "f": program.Cmd(Command.GetF); break;
+            case "g": program.Cmd(Command.GetG); break;
+            case "h": program.Cmd(Command.GetH); break;
+            case "i": program.Cmd(Command.GetI); break;
+            case "j": program.Cmd(Command.GetJ); break;
+            case "k": program.Cmd(Command.GetK); break;
+            case "l": program.Cmd(Command.GetL); break;
+            case "m": program.Cmd(Command.GetM); break;
+            case "n": program.Cmd(Command.GetN); break;
+            
+            default: throw new Exception($"Unknown constant or variable: '{token}'");
         }
     }
 

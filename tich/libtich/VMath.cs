@@ -20,6 +20,11 @@ internal class VMath
     {
         return Variant.Scalar(Math.Acos(v.Values[0]));
     }
+    
+    public static Variant Atan(Variant b, Variant a)
+    {
+        return Variant.Scalar(Math.Atan2(a.Values[0],b.Values[0]));
+    }
 
     public static Variant Sin(Variant v)
     {

@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace libtich;
 
 /// <summary>
@@ -6,6 +8,7 @@ namespace libtich;
 public class TichProgram
 {
     private readonly List<Cell> _program;
+    private Variant[] _registers = new Variant[14];
 
     /// <summary>
     /// Wrap a program in a runner
@@ -13,16 +16,15 @@ public class TichProgram
     public TichProgram(IEnumerable<Cell> program)
     {
         _program = program.ToList();
+        for (int i = 0; i < _registers.Length; i++) { _registers[i] = Variant.Scalar(0.0); }
     }
     
     /// <summary>
-    /// Create a new tich program from a math expression
+    /// Create a new tich program from a set of math expressions
     /// </summary>
-    public static TichProgram Compile(string expression)
+    public static TichProgram Compile(string programString)
     {
-        var postfix = Compiler.InfixToPostfix(expression);
-        var code = Compiler.CompilePostfix(postfix).ToList();
-        return new TichProgram(code);
+        return new TichProgram(Compiler.CompileProgram(programString));
     }
 
     /// <summary>
@@ -41,7 +43,7 @@ public class TichProgram
                 continue;
             }
 
-            var end = NextStep(step, stack);
+            var end = NextStep(step, stack, ref parameter);
             //Console.WriteLine($" -> {string.Join(",",stack.Select(s=>s.ToString()))}");
             
             if (end)
@@ -82,12 +84,28 @@ public class TichProgram
         }
         return list.ToArray();
     }
-    
+
+    /// <summary>
+    /// Output a string of the commands in this program
+    /// </summary>
+    public string Describe()
+    {
+        var sb = new StringBuilder();
+
+        foreach (var cell in _program)
+        {
+            sb.Append(cell);
+            sb.Append(' ');
+        }
+
+        return sb.ToString();
+    }
+
 
     /// <summary>
     /// Giant switch that rules the program
     /// </summary>
-    private static bool NextStep(Cell step, Stack<Variant> stack)
+    private bool NextStep(Cell step, Stack<Variant> stack, ref Variant parameter)
     {
         const bool next = false;
         const bool stop = true;
@@ -105,6 +123,10 @@ public class TichProgram
             
             case Command.Acos:
                 stack.Push(VMath.Acos(Pop(stack)));
+                return next;
+            
+            case Command.Atan:
+                stack.Push(VMath.Atan(Pop(stack),Pop(stack)));
                 return next;
             
             case Command.Sin:
@@ -383,9 +405,70 @@ public class TichProgram
             
             case Command.P:
                 throw new InvalidOperationException("Switch was passed a `P` command, which should have been handled elsewhere.");
+
+            case Command.MoveP:
+            {
+                parameter = stack.Pop();
+                return next;
+            }
+
+
+            case Command.GetA: return PushReg(stack, 0);
+            case Command.SetA: return PopReg(stack, 0);
+            
+            case Command.GetB: return PushReg(stack, 1);
+            case Command.SetB: return PopReg(stack, 1);
+            
+            case Command.GetC: return PushReg(stack, 2);
+            case Command.SetC: return PopReg(stack, 2);
+            
+            case Command.GetD: return PushReg(stack, 3);
+            case Command.SetD: return PopReg(stack, 3);
+            
+            case Command.GetE: return PushReg(stack, 4);
+            case Command.SetE: return PopReg(stack, 4);
+            
+            case Command.GetF: return PushReg(stack, 5);
+            case Command.SetF: return PopReg(stack, 5);
+            
+            case Command.GetG: return PushReg(stack, 6);
+            case Command.SetG: return PopReg(stack, 6);
+            
+            case Command.GetH: return PushReg(stack, 7);
+            case Command.SetH: return PopReg(stack, 7);
+            
+            case Command.GetI: return PushReg(stack, 8);
+            case Command.SetI: return PopReg(stack, 8);
+            
+            case Command.GetJ: return PushReg(stack, 9);
+            case Command.SetJ: return PopReg(stack, 9);
+            
+            case Command.GetK: return PushReg(stack, 10);
+            case Command.SetK: return PopReg(stack, 10);
+            
+            case Command.GetL: return PushReg(stack, 11);
+            case Command.SetL: return PopReg(stack, 11);
+            
+            case Command.GetM: return PushReg(stack, 12);
+            case Command.SetM: return PopReg(stack, 12);
+            
+            case Command.GetN: return PushReg(stack, 13);
+            case Command.SetN: return PopReg(stack, 13);
+            
             default:
-                throw new ArgumentOutOfRangeException($"Program has an unknown command: {step.Cmd}");
+                throw new Exception($"Program has an unknown command: {step.Cmd}");
         }
+    }
+
+    private bool PushReg(Stack<Variant> stack, int i)
+    {
+        stack.Push(_registers[i]);
+        return false;
+    }
+    private bool PopReg(Stack<Variant> stack, int i)
+    {
+        _registers[i] = stack.Pop();
+        return false;
     }
 
     private static double[] PopArray(Stack<Variant> stack, int len)

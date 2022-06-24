@@ -36,7 +36,7 @@ public static class TichRenderer
                 var value = Math.Min(1.0, Math.Max(0.0, dist));
                     
                 // fill gap to next point
-                while (x < end)
+                //while (x < end)
                 {
                     outp[x++, y] = value;
                 }

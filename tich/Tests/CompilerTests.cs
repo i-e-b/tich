@@ -14,18 +14,18 @@ public class CompilerTests
         "The name of the register being set is the only character to the left of a single ':'. To the right is the expression setting the value.")]
     [TestCase("a: p.x + p.y; p - a", -7.0)] // last ';' not present
     [TestCase("a: p.x + p.y; p - a;", -7.0)] // last ';' is present
-    public void assignment_and_reading(string expr, double expected)
+    [TestCase("a:1; b:a+2; c:b+3; d:c+4; e:d+5; f:e+6; g:f+7; h:g+8; i:h+9; j:i+10; k:j+11; l:k+12; m:l+13; n:m+14; n", 105.0)] // check the entire set of registers
+    [TestCase(";;a: p.x + p.y;  ; ; ; ; p - a;;;;;", -7.0)] // extra ';' are ignored
+    [TestCase("     a    :     1   ;b:2; a+b", 3.0)] // spacing is unimportant
+    [TestCase("     a    :\r\n     1   ;\nb:2; a\n\t+b", 3.0)] // newlines are ignored
+    public void assignment_and_reading(string progStr, double expected)
     {
-        Console.WriteLine($"Interpreting ({expr})");
-        var postfix = Compiler.InfixToPostfix(expr);
-        Assert.That(postfix, Is.Not.Null);
-        Console.WriteLine(postfix.PrettyPrint());
+        Console.WriteLine($"Interpreting ({progStr})");
+        var program = TichProgram.Compile(progStr);
         
-        var code = Compiler.CompilePostfix(postfix).ToList();
-        Assert.That(code, Is.Not.Null);
-        Console.WriteLine(code.PrettyPrint());
+        var size = program.Serialise().Length;
+        Console.WriteLine($"Program is {size} bytes");
         
-        var program = new TichProgram(code);
         var result = program.CalculateForPoint(5,7); // length is ~= 8.60232
         Assert.That(result, Is.EqualTo(expected).Within(0.001));
     }
@@ -64,6 +64,7 @@ public class CompilerTests
     [TestCase("-2 - -1 * -10 - -1 - -(-1 - -2)", -10.0)]
     [TestCase("-(-2 - -1) * -(-10 - -1) - -(-1 - -2)", 10.0)]
     [TestCase("-pi - -pi", 0)] // -π + π
+    [TestCase("sign( -sin(p))", 1.0)] // works if: clamp( -(dot(p,d)), 0.0,1.0)   // clamp( -dot(p,d), 0,1)
     public void negation_torture_test(string expr, double expected)
     {
         Console.WriteLine($"Interpreting ({expr})");
@@ -132,6 +133,7 @@ public class CompilerTests
     [Test] // these pass P where appropriate to check the initial-P elision. 
     [TestCase("abs(p)", Command.Abs)]
     [TestCase("acos(p)", Command.Acos)]
+    [TestCase("atan(p,pi)", Command.Atan)]
     [TestCase("all(p)", Command.All)]
     [TestCase("and(p,p)", Command.And)]
     [TestCase("angle(p)", Command.Angle)]

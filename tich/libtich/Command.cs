@@ -23,6 +23,8 @@ public enum Command : byte
     Cos,
     /// <summary> Arc cosine, stack:1->1, params:0 </summary>
     Acos,
+    /// <summary> Arc tangent, stack:1->1, params:0 </summary>
+    Atan,
     /// <summary> Sine, stack:1->1, params:0 </summary>
     Sin,
     /// <summary> Absolute value, stack:1->1, params:0 </summary>
